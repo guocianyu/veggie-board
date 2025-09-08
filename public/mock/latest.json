@@ -1,0 +1,77 @@
+{
+  "updatedAt": "2024-01-15T08:30:00.000Z",
+  "tradeDate": "2024-01-15",
+  "scope": "TW",
+  "items": [
+    {
+      "cropCode": "C001",
+      "cropName": "高麗菜",
+      "wavg": 25.5,
+      "vol": 1250,
+      "dod": 8.2
+    },
+    {
+      "cropCode": "C002",
+      "cropName": "青江菜",
+      "wavg": 18.3,
+      "vol": 890,
+      "dod": -3.1
+    },
+    {
+      "cropCode": "C003",
+      "cropName": "番茄",
+      "wavg": 45.2,
+      "vol": 650,
+      "dod": 12.5
+    },
+    {
+      "cropCode": "C004",
+      "cropName": "香蕉",
+      "wavg": 32.8,
+      "vol": 2100,
+      "dod": -5.8
+    },
+    {
+      "cropCode": "C005",
+      "cropName": "馬鈴薯",
+      "wavg": 28.6,
+      "vol": 980,
+      "dod": 2.1
+    },
+    {
+      "cropCode": "C006",
+      "cropName": "洋蔥",
+      "wavg": 22.4,
+      "vol": 1150,
+      "dod": -1.3
+    },
+    {
+      "cropCode": "C007",
+      "cropName": "蘋果",
+      "wavg": 65.8,
+      "vol": 420,
+      "dod": 15.2
+    },
+    {
+      "cropCode": "C008",
+      "cropName": "小白菜",
+      "wavg": 16.7,
+      "vol": 750,
+      "dod": -7.4
+    },
+    {
+      "cropCode": "C009",
+      "cropName": "玉米",
+      "wavg": 35.2,
+      "vol": 1380,
+      "dod": 4.6
+    },
+    {
+      "cropCode": "C010",
+      "cropName": "菠菜",
+      "wavg": 28.9,
+      "vol": 520,
+      "dod": -2.8
+    }
+  ]
+}

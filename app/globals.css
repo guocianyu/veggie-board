@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-green: #D1F472;
+  --brand-orange: #C13D1A;
+  --ink: #111827;
+  --muted: #6B7280;
+  --surface: #FFFFFF;
+  --bg: #F7F8FA;
+}
+
+@layer base {
+  html {
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  
+  body {
+    background-color: #F7F8FA;
+    color: #111827;
+  }
+}
+
+@layer components {
+  /* 主題工具類 */
+  .theme-green {
+    background: var(--brand-green);
+    color: #0A0A0A;
+  }
+  
+  .theme-orange {
+    background: var(--brand-orange);
+    color: #FFFFFF;
+  }
+  
+  /* 文字樣式 */
+  .type-h1 {
+    @apply text-2xl md:text-3xl font-bold text-ink mb-2;
+  }
+  
+  .type-subtle {
+    @apply text-sm md:text-base leading-relaxed text-muted;
+  }
+  
+  .stack-title {
+    @apply mb-2;
+  }
+  
+  .stack-subtitle {
+    @apply mb-0;
+  }
+  
+  /* 卡片通用樣式 */
+  .card {
+    @apply rounded-3xl bg-[var(--surface)] shadow-card;
+  }
+  
+  .card:hover {
+    @apply shadow-card-hover;
+  }
+  
+  /* 按鈕基礎樣式 */
+  .btn {
+    @apply inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn:focus {
+    @apply ring-brandOrange;
+  }
+  
+  /* 徽章基礎樣式 */
+  .badge {
+    @apply inline-flex items-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .badge:focus {
+    @apply ring-brandGreen;
+  }
+}
+
+@layer components {
+  /* 手機預設窄欄：約 56% 螢幕寬，置中；md 以上回到較寬容器 */
+  .hero-wrap {
+    @apply mx-auto text-center max-w-[58vw] sm:max-w-[60vw] md:max-w-2xl lg:max-w-3xl;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
