@@ -1,5 +1,17 @@
 {
   "crons": [
     { "path": "/api/jobs/daily-ingest", "schedule": "5 19 * * *" }
-  ]
+  ],
+  "functions": {
+    "app/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "DATA_SOURCE": "mock",
+    "RETAIL_COEF_LEAFY": "1.5",
+    "RETAIL_COEF_FRUIT": "1.7",
+    "RETAIL_COEF_ROOT": "1.3",
+    "RETAIL_COEF_OTHER": "1.4"
+  }
 }

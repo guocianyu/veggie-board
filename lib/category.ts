@@ -12,6 +12,7 @@ export function getGroup(cropName: string): Group {
   const category = categoryMap[cropName as keyof typeof categoryMap];
   
   // 如果分類是 'fruit'，則返回 'fruit'，否則一律視為 'veg'
+  // 注意：番茄、西瓜等雖然在植物學上是水果，但在台灣菜市場習慣上歸類為蔬菜
   return category === 'fruit' ? 'fruit' : 'veg';
 }
 

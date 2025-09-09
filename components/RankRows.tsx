@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { PriceItem } from '@/types';
 import { filterByGroup, getGroup } from '@/lib/category';
 import { formatPrice, formatPercentage } from '@/lib/format';
@@ -65,30 +64,33 @@ export default function RankRows({
     const delta = deltaAbs(item);
 
     return (
-      <Link
-        href={`/c/${item.cropCode}`}
-        className="block"
-        aria-label={`${item.cropName} ${isGainer ? '上漲' : '下跌'} ${formatPercentage(Math.abs(item.dod))}%，均價 ${formatPrice(currentPrice)} 元/公斤`}
-      >
-        <ListRow
-          clickable
-          start={<CodeBadge code={item.cropCode} />}
-          primary={item.cropName}
-          end={
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-ink font-medium">
-                  {formatPrice(currentPrice)}
-                </div>
-                <div className="text-xs text-muted">
-                  {isGainer ? '+' : '-'}{formatPrice(delta)}
-                </div>
+      <li className="py-4 px-6 border-b border-black/10">
+        <div
+          role="listitem"
+          aria-disabled="true"
+          className="flex items-center gap-4 rounded-xl cursor-default select-text focus-visible:outline-none"
+          aria-label={`${item.cropName} ${isGainer ? '上漲' : '下跌'} ${formatPercentage(Math.abs(item.dod))}%，均價 ${formatPrice(currentPrice)} 元/公斤`}
+        >
+          {/* 左：代碼徽章 */}
+          <CodeBadge code={item.cropCode} />
+          {/* 中：名稱 */}
+          <div className="flex-1 min-w-0 font-medium text-ink truncate">
+            {item.cropName}
+          </div>
+          {/* 右：價格與漲跌膠囊 */}
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-ink font-medium">
+                {formatPrice(currentPrice)}
               </div>
-              <PillDelta value={item.dod} />
+              <div className="text-xs text-muted">
+                {isGainer ? '+' : '-'}{formatPrice(delta)}
+              </div>
             </div>
-          }
-        />
-      </Link>
+            <PillDelta value={item.dod} />
+          </div>
+        </div>
+      </li>
     );
   };
 
@@ -128,11 +130,11 @@ export default function RankRows({
               </CardHeader>
               <CardContent className="p-0">
                 {gainers.length > 0 ? (
-                  <div className="divide-y divide-black/10">
+                  <ul className="static-list divide-y divide-black/10">
                     {gainers.map((item) => (
                       <RankItem key={item.cropCode} item={item} isGainer={true} />
                     ))}
-                  </div>
+                  </ul>
                 ) : (
                   <div className="p-8 text-center text-muted text-sm">
                     目前沒有漲幅資料可供顯示。
@@ -155,11 +157,11 @@ export default function RankRows({
               </CardHeader>
               <CardContent className="p-0">
                 {losers.length > 0 ? (
-                  <div className="divide-y divide-black/10">
+                  <ul className="static-list divide-y divide-black/10">
                     {losers.map((item) => (
                       <RankItem key={item.cropCode} item={item} isGainer={false} />
                     ))}
-                  </div>
+                  </ul>
                 ) : (
                   <div className="p-8 text-center text-muted text-sm">
                     目前沒有跌幅資料可供顯示。
@@ -171,7 +173,7 @@ export default function RankRows({
         </div>
       )}
 
-      {/* 最便宜清單 */}
+      {/* 最便宜菜單 */}
       <CheapestBoard items={items} />
     </div>
   );

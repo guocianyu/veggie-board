@@ -6,12 +6,21 @@ import { headers } from 'next/headers';
  * 解析基礎 URL（伺服端）
  */
 function resolveBaseUrl() {
-  const h = headers()
-  const proto = h.get('x-forwarded-proto') || 'https'
-  const host  = h.get('x-forwarded-host') || h.get('host')
-  if (host) return `${proto}://${host}`
-  if (process.env.BASE_URL) return process.env.BASE_URL
+  // 在 Vercel 環境中優先使用環境變數
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  if (process.env.BASE_URL) return process.env.BASE_URL
+  
+  // 嘗試使用 headers（可能在某些環境中不可用）
+  try {
+    const h = headers()
+    const proto = h.get('x-forwarded-proto') || 'https'
+    const host  = h.get('x-forwarded-host') || h.get('host')
+    if (host) return `${proto}://${host}`
+  } catch (error) {
+    // headers() 不可用時忽略錯誤
+    console.log('[Datasource] headers() 不可用，使用環境變數');
+  }
+  
   return 'http://localhost:3000'
 }
 

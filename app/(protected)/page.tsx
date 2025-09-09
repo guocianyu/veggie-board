@@ -67,9 +67,9 @@ export default async function HomePage() {
         </div>
         {/* 頁面標題與副標 */}
         <header className="hero-wrap mb-6 md:mb-8 mt-8 md:mt-12">
-          <h1 className="type-h1 stack-title" style={{ marginTop: '8px' }}>今日漲跌排行</h1>
+          <h1 className="type-h1 stack-title" style={{ marginTop: '8px' }}>今日菜價動態</h1>
           <p className="type-subtle stack-subtitle">
-            每天自動彙整台灣蔬果行情，像股票一樣看漲跌趨勢
+            一眼看懂今天哪些菜漲了、哪些菜跌了
           </p>
         </header>
 

@@ -84,6 +84,13 @@
   .hero-wrap {
     @apply mx-auto text-center max-w-[58vw] sm:max-w-[60vw] md:max-w-2xl lg:max-w-3xl;
   }
+
+  /* 套在清單容器即可停用互動、hover 與手指游標 */
+  .static-list li > * { cursor: default !important; }
+  .static-list li > a,
+  .static-list li [data-clickable="true"] { pointer-events: none !important; }
+  .static-list li:hover,
+  .static-list li > *:hover { background-color: transparent !important; box-shadow: none !important; }
 }
 
 @layer utilities {

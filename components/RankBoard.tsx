@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { PriceItem } from '@/types';
 import { filterByGroup, sortByDirection } from '@/lib/category';
 import { formatPrice, formatPercentage } from '@/lib/format';
@@ -40,7 +39,7 @@ export default function RankBoard({ items }: RankBoardProps) {
       {/* 頁面標題 */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-ink mb-2">
-          今日漲跌排行
+          今日菜價動態
         </h1>
         <p className="text-muted">
           即時掌握蔬果價格變化趨勢
@@ -127,7 +126,7 @@ export default function RankBoard({ items }: RankBoardProps) {
               className="w-full"
               id="rank-table"
               role="table"
-              aria-label="價格漲跌排行表"
+              aria-label="菜價動態表"
             >
               <thead>
                 <tr className="border-b border-gray-200">
@@ -164,19 +163,16 @@ export default function RankBoard({ items }: RankBoardProps) {
                   return (
                     <tr 
                       key={item.cropCode}
-                      className="hover:bg-gray-50 transition-colors"
+                      className="cursor-default"
                       aria-label={`第${index + 1}名 ${item.cropName} 漲跌幅${dodText} 批發均價${formatPrice(item.wavg)}`}
                     >
                       <td className="px-6 py-4 text-sm font-medium text-muted">
                         #{index + 1}
                       </td>
                       <td className="px-6 py-4">
-                        <Link
-                          href={`/c/${item.cropCode}`}
-                          className="text-sm font-medium text-ink hover:text-brandOrange transition-colors"
-                        >
+                        <span className="text-sm font-medium text-ink">
                           {item.cropName}
-                        </Link>
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end space-x-1">

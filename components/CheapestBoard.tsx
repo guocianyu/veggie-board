@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import Link from 'next/link';
 import type { PriceItem } from '@/types';
 import { getGroup } from '@/lib/category';
 import { estimateRetailPrice } from '@/lib/retail';
@@ -12,7 +11,7 @@ import { CodeBadge } from '@/components/ds/CodeBadge';
 
 const TOP_CHEAP = 50;
 const PAGE_SIZE = 10;
-const MIN_VOL = 100;
+const MIN_VOL = 500;
 
 export default function CheapestBoard({ items }: { items: PriceItem[] }) {
   const { mode } = usePriceMode();
@@ -65,7 +64,7 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
     const fruitPages = Math.max(1, Math.ceil(fruitAll.length / PAGE_SIZE));
 
     return { vegAll, fruitAll, vegPages, fruitPages };
-  }, [items, mode, pageVeg, pageFruit]); // 切換價格模式或頁面時重新計算
+  }, [items, mode]); // 只依賴 items 和 mode，不依賴頁面狀態
 
   // 取得當前頁面的資料
   const slicePage = (arr: PriceItem[], page: number) => {
@@ -77,8 +76,8 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
 
   // 動態標題和說明
   const titleByMode = mode === 'wholesale' 
-    ? '以批發價排序（由低到高）' 
-    : '去菜市場怕買貴嗎？先看一下估算價格，然後再決定今天晚餐煮什麼';
+    ? '先比價再決定今晚要煮什麼' 
+    : '先比價再決定今晚要煮什麼';
   
   const explanation = mode === 'wholesale'
     ? `只看今天全台批發市場賣得夠多的品項（總成交量 ≥ ${MIN_VOL} 公斤），用批發價從便宜排到貴。`
@@ -89,29 +88,32 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
     const price = priceOf(item);
     
     return (
-      <Link
-        href={`/c/${item.cropCode}`}
-        className="block"
-        aria-label={`${item.cropName}，當前價格 ${formatCurrency(price)} 元/公斤`}
-      >
-        <ListRow
-          clickable
-          start={<CodeBadge code={item.cropCode} />}
-          primary={item.cropName}
-          end={
-            <div className="flex items-center gap-2">
-              <div className="text-right tabular-nums text-ink font-medium">
-                {formatCurrency(price)}
-              </div>
-              {mode === 'retail' && (
-                <span className="inline-flex items-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-black/5 text-ink hover:bg-black/10 focus:ring-brandOrange px-2 py-1 text-xs rounded-lg">
-                  估算
-                </span>
-              )}
+      <li className="py-4 px-6 border-b border-black/10">
+        <div
+          role="listitem"
+          aria-disabled="true"
+          className="flex items-center gap-4 rounded-xl cursor-default select-text focus-visible:outline-none"
+          aria-label={`${item.cropName}，當前價格 ${formatCurrency(price)} 元/公斤`}
+        >
+          {/* 左：代碼徽章 */}
+          <CodeBadge code={item.cropCode} />
+          {/* 中：名稱 */}
+          <div className="flex-1 min-w-0 font-medium text-ink truncate">
+            {item.cropName}
+          </div>
+          {/* 右：價格與估算標籤 */}
+          <div className="flex items-center gap-2">
+            <div className="text-right tabular-nums text-ink font-medium">
+              {formatCurrency(price)}
             </div>
-          }
-        />
-      </Link>
+            {mode === 'retail' && (
+              <span className="inline-flex items-center font-medium bg-black/5 text-ink px-2 py-1 text-xs rounded-lg">
+                估算
+              </span>
+            )}
+          </div>
+        </div>
+      </li>
     );
   };
 
@@ -153,7 +155,7 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
   return (
     <section className="mt-0" aria-label="最便宜蔬果清單">
       <header className="hero-wrap mb-6 md:mb-8">
-        <h2 className="type-h1 stack-title text-center">最便宜清單</h2>
+        <h2 className="type-h1 stack-title text-center">最便宜菜單</h2>
         <p className="type-subtle stack-subtitle text-center">{titleByMode}</p>
       </header>
 
@@ -163,7 +165,7 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
           <Card>
             <CardHeader>
               <h3 className="text-lg font-bold text-ink mb-1">
-                最便宜蔬菜
+                最便宜蔬菜 TOP {Math.min(vegAll.length, TOP_CHEAP)}
               </h3>
               <p className="text-sm text-muted">
                 {mode === 'wholesale' ? '以批發價排序' : '以我會買到的價格排序'}
@@ -171,11 +173,11 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
             </CardHeader>
             <CardContent className="p-0">
               {vegPage.length > 0 ? (
-                <div className="divide-y divide-black/10">
+                <ul className="static-list divide-y divide-black/10">
                   {vegPage.map(item => (
                     <Row key={item.cropCode} item={item} />
                   ))}
-                </div>
+                </ul>
               ) : (
                 <div className="p-8 text-center text-muted text-sm">
                   目前沒有符合條件的蔬菜品項。
@@ -198,7 +200,7 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
           <Card>
             <CardHeader>
               <h3 className="text-lg font-bold text-ink mb-1">
-                最便宜水果
+                最便宜水果 TOP {Math.min(fruitAll.length, TOP_CHEAP)}
               </h3>
               <p className="text-sm text-muted">
                 {mode === 'wholesale' ? '以批發價排序' : '以我會買到的價格排序'}
@@ -206,11 +208,11 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
             </CardHeader>
             <CardContent className="p-0">
               {fruitPage.length > 0 ? (
-                <div className="divide-y divide-black/10">
+                <ul className="static-list divide-y divide-black/10">
                   {fruitPage.map(item => (
                     <Row key={item.cropCode} item={item} />
                   ))}
-                </div>
+                </ul>
               ) : (
                 <div className="p-8 text-center text-muted text-sm">
                   目前沒有符合條件的水果品項。
