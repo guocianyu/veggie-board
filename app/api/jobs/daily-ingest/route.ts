@@ -96,5 +96,3 @@ async function handle(req: Request) {
     );
   }
 }
-
-export const runtime = 'nodejs';
