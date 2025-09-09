@@ -3,22 +3,13 @@
  * 使用 Service Role Key 進行伺服端操作
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabaseClient';
 
 // 檢查環境變數，如果沒有則使用模擬數據
 const hasSupabaseConfig = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE;
 
-// 建立 Supabase 客戶端（使用 Service Role Key）
-export const db = hasSupabaseConfig ? createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-) : null;
+// 使用 Supabase 單例客戶端
+export const db = supabase;
 
 /**
  * 資料庫表格結構定義
