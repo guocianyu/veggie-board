@@ -12,7 +12,8 @@
 ### 💰 零售價格估算
 - 基於批發價格的智能零售估算
 - 依蔬果類別自動調整係數
-- 葉菜類、果菜類、根莖類、其他類分類
+- 葉菜類、果菜類、根莖類、其他類、花卉類分類
+- 花卉類自動過濾，不顯示在介面中
 
 ### 📊 互動式圖表
 - 價格區間帶顯示（最高-最低價）
@@ -30,6 +31,18 @@
 - 即時狀態更新
 - 預估等候時間
 
+### 🌸 智能分類系統
+- 自動識別並過濾花卉類商品
+- 精確的水果/蔬菜分類
+- 支援作物名稱變體識別
+- 基於關鍵字和對照表的雙重分類機制
+
+### 🔄 自動化部署
+- GitHub Actions 自動部署到 Vercel
+- 支援多環境部署（開發/預覽/生產）
+- 自動化測試和建置流程
+- 環境變數安全管理
+
 ## 技術架構
 
 - **前端框架**: Next.js 14 (App Router)
@@ -38,11 +51,13 @@
 - **圖表庫**: Recharts
 - **狀態管理**: React Hooks + localStorage
 - **資料驗證**: Zod
+- **資料源**: 農業部 AMIS Open Data API
+- **部署平台**: Vercel + GitHub Actions
 
 ## 快速開始
 
 ### 環境需求
-- Node.js 18+ 
+- Node.js 20+ 
 - npm 或 yarn
 
 ### 安裝步驟
@@ -79,28 +94,40 @@
 ```
 veggie-board/
 ├── app/                    # Next.js App Router
-│   ├── (protected)/       # 受保護的頁面
-│   │   ├── page.tsx      # 首頁
-│   │   └── c/[crop]/     # 品項詳頁
-│   ├── wait/             # 等候室頁面
-│   ├── api/              # API 路由
-│   ├── globals.css       # 全域樣式
-│   └── layout.tsx        # 根佈局
+│   ├── page.tsx           # 首頁（原 protected 頁面）
+│   ├── wait/              # 等候室頁面
+│   ├── test/              # 測試頁面
+│   ├── api/               # API 路由
+│   │   ├── data/latest/   # 最新資料 API
+│   │   └── jobs/daily-ingest/ # 每日資料同步
+│   ├── globals.css        # 全域樣式
+│   └── layout.tsx         # 根佈局
 ├── components/            # React 元件
 │   ├── ui/               # 基礎 UI 元件
+│   ├── ds/               # 設計系統元件
+│   ├── CheapestBoard.tsx # 最便宜看板
+│   ├── RankBoard.tsx     # 排行看板
+│   ├── RankRows.tsx      # 排行列表
 │   ├── PriceTrendChart.tsx
 │   ├── PriceDetailChart.tsx
-│   └── RetailToggle.tsx
+│   ├── RetailToggle.tsx
+│   ├── Gatekeeper.tsx    # 等候室守門員
+│   └── FloatingPriceMode.tsx
 ├── lib/                  # 工具函式
 │   ├── env.ts           # 環境變數驗證
 │   ├── datasource.ts    # 資料源切換
 │   ├── retail.ts        # 零售估算邏輯
+│   ├── category.ts      # 分類邏輯
+│   ├── amis.ts          # AMIS API 整合
 │   ├── format.ts        # 格式化工具
 │   ├── ui-prefs.ts      # UI 偏好管理
 │   └── utils.ts         # 通用工具
 ├── types/               # TypeScript 型別定義
 ├── aliases/             # 資料對照表
+│   └── category-map.json # 分類對照表
 ├── public/mock/         # Mock 資料
+├── scripts/             # 部署和測試腳本
+├── .github/workflows/   # GitHub Actions
 └── style-guide.md       # 樣式指南
 ```
 
@@ -111,10 +138,15 @@ veggie-board/
 - 適合開發和測試
 - 包含範例資料
 
+### API 模式
+- 設定 `DATA_SOURCE=api`
+- 直接從農業部 AMIS Open Data API 獲取即時資料
+- 支援自動資料同步和更新
+
 ### 資料庫模式
 - 設定 `DATA_SOURCE=db`
-- 需要實作資料庫查詢邏輯
-- 目前為 stub 實作
+- 使用 Supabase 資料庫儲存歷史資料
+- 支援 CRON 排程自動同步
 
 ## 零售估算係數
 
@@ -124,6 +156,7 @@ veggie-board/
 | 果菜類 | 1.7 | 番茄、香蕉、蘋果等 |
 | 根莖類 | 1.3 | 馬鈴薯、洋蔥、紅蘿蔔等 |
 | 其他類 | 1.4 | 玉米、豆類、菇類等 |
+| 花卉類 | 1.0 | 火鶴花、繡球花等（自動過濾） |
 
 ## 開發指南
 
@@ -163,7 +196,27 @@ npm start
 - [x] 詳頁圖表可切換顯示「零售估算線」（虛線）
 - [x] 單位皆為「元/公斤」
 - [x] 等候室頁面會輪詢 availability 並顯示狀態
-- [x] `DATA_SOURCE=mock|db` 切換時 UI 不報錯（db 模式顯示空狀態）
+- [x] `DATA_SOURCE=mock|api|db` 切換時 UI 不報錯
+- [x] 花卉類商品自動過濾，不顯示在介面中
+- [x] 水果/蔬菜分類準確，支援變體名稱識別
+- [x] 路由衝突修復，應用程式正常啟動
+- [x] 環境變數驗證優化，提供預設值
+- [x] GitHub Actions 自動部署設定完成
+
+## 版本更新
+
+### v0.1.0 (最新)
+- ✅ 修復路由衝突問題，應用程式正常啟動
+- ✅ 新增花卉類商品自動過濾功能
+- ✅ 改進水果/蔬菜分類準確性
+- ✅ 優化環境變數驗證，提供預設值
+- ✅ 新增 GitHub Actions 自動部署
+- ✅ 支援 AMIS API 即時資料獲取
+- ✅ 改進專案結構和文檔
+
+### 已知問題
+- 資料庫模式需要 Supabase 設定才能完全運作
+- 部分進口商品分類可能需要手動調整
 
 ## 授權
 
