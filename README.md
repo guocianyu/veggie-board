@@ -173,8 +173,85 @@ MIT License
 
 歡迎提交 Issue 和 Pull Request！
 
+## 部署說明
+
+### 環境變數設定
+
+在 `.env.local` 檔案中設定以下環境變數：
+
+```bash
+# 資料來源設定
+DATA_SOURCE=db  # 或 mock
+
+# 零售價格係數
+RETAIL_COEF_LEAFY=1.5
+RETAIL_COEF_FRUIT=1.7
+RETAIL_COEF_ROOT=1.3
+RETAIL_COEF_OTHER=1.4
+
+# Supabase 設定（如果使用資料庫）
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE=your_service_role_key
+
+# CRON 排程密鑰
+CRON_SECRET=your_cron_secret
+```
+
+### GitHub 自動部署
+
+1. **設定 GitHub Secrets**：
+   - 前往 GitHub 倉庫的 Settings > Secrets and variables > Actions
+   - 新增以下 secrets：
+     - `VERCEL_TOKEN`: 你的 Vercel Personal Token
+     - `VERCEL_ORG_ID`: 你的 Vercel Organization ID
+     - `VERCEL_PROJECT_ID`: 你的 Vercel Project ID
+
+2. **自動部署**：
+   - 推送程式碼到 `main` 分支會自動觸發部署
+   - 部署狀態可在 GitHub Actions 頁面查看
+
+### Vercel 手動部署
+
+1. **安裝 Vercel CLI**：
+```bash
+npm i -g vercel
+```
+
+2. **使用部署腳本**：
+```bash
+# 設定環境變數
+export VERCEL_TOKEN=your_vercel_token
+export SUPABASE_URL=your_supabase_url
+export SUPABASE_SERVICE_ROLE=your_service_role_key
+export CRON_SECRET=your_cron_secret
+
+# 執行部署
+./scripts/deploy-vercel.sh
+```
+
+3. **手動部署**：
+```bash
+# 建置專案
+npm run build
+
+# 部署到 Vercel
+vercel --prod
+```
+
+### 本地開發
+
+```bash
+# 安裝依賴
+npm install
+
+# 啟動開發服務器
+npm run dev
+
+# 開啟 http://localhost:3000
+```
+
 ## 聯絡我們
 
-- 專案首頁: [GitHub Repository]
-- 問題回報: [GitHub Issues]
+- 專案首頁: [GitHub Repository](https://github.com/guocianyu/veggie-board)
+- 問題回報: [GitHub Issues](https://github.com/guocianyu/veggie-board/issues)
 - 電子郵件: contact@veggieboard.com
