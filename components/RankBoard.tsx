@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { PriceItem } from '@/types';
 import { filterByGroup, sortByDirection } from '@/lib/category';
+import { getCategory } from '@/lib/retail';
 import { formatPrice, formatPercentage } from '@/lib/format';
 import { Button } from '@/components/ds/Button';
 import { Card } from '@/components/ds/Card';
@@ -22,7 +23,9 @@ export default function RankBoard({ items }: RankBoardProps) {
 
   // 處理資料：過濾 → 排序 → 取前 N 筆
   const processedItems = useMemo(() => {
-    const filtered = filterByGroup(items, group);
+    // 先過濾掉花卉
+    const nonFlowerItems = items.filter(item => getCategory(item.cropName) !== 'flower');
+    const filtered = filterByGroup(nonFlowerItems, group);
     const sorted = sortByDirection(filtered, mode);
     return sorted.slice(0, TOP_N);
   }, [items, group, mode]);

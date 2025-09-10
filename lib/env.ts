@@ -1,24 +1,57 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // 環境變數驗證 schema
 const envSchema = z.object({
   // 資料來源設定
-  DATA_SOURCE: z.enum(['mock', 'db']).default('mock'),
-  
+  DATA_SOURCE: z.enum(["mock", "api", "db"]).default("mock"),
+
   // 零售係數設定
-  RETAIL_COEF_LEAFY: z.string().transform(Number).pipe(z.number().positive()).default('1.5'),
-  RETAIL_COEF_FRUIT: z.string().transform(Number).pipe(z.number().positive()).default('1.7'),
-  RETAIL_COEF_ROOT: z.string().transform(Number).pipe(z.number().positive()).default('1.3'),
-  RETAIL_COEF_OTHER: z.string().transform(Number).pipe(z.number().positive()).default('1.4'),
+  RETAIL_COEF_LEAFY: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().positive())
+    .default("1.5"),
+  RETAIL_COEF_FRUIT: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().positive())
+    .default("1.7"),
+  RETAIL_COEF_ROOT: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().positive())
+    .default("1.3"),
+  RETAIL_COEF_OTHER: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().positive())
+    .default("1.4"),
 });
 
 // 驗證並解析環境變數
 function validateEnv() {
   try {
-    return envSchema.parse(process.env);
+    // 提供預設環境變數
+    const defaultEnv = {
+      DATA_SOURCE: "mock",
+      RETAIL_COEF_LEAFY: "1.5",
+      RETAIL_COEF_FRUIT: "1.7", 
+      RETAIL_COEF_ROOT: "1.3",
+      RETAIL_COEF_OTHER: "1.4",
+      ...process.env
+    };
+    
+    return envSchema.parse(defaultEnv);
   } catch (error) {
-    console.error('❌ 環境變數驗證失敗:', error);
-    throw new Error('環境變數設定錯誤，請檢查 .env.local 檔案');
+    console.error("❌ 環境變數驗證失敗:", error);
+    // 回傳預設值而不是拋出錯誤
+    return {
+      DATA_SOURCE: "mock" as const,
+      RETAIL_COEF_LEAFY: 1.5,
+      RETAIL_COEF_FRUIT: 1.7,
+      RETAIL_COEF_ROOT: 1.3,
+      RETAIL_COEF_OTHER: 1.4,
+    };
   }
 }
 
@@ -37,8 +70,8 @@ export const retailCoefficients = {
 } as const;
 
 // 資料來源檢查
-export const isMockMode = env.DATA_SOURCE === 'mock';
-export const isDbMode = env.DATA_SOURCE === 'db';
+export const isMockMode = env.DATA_SOURCE === "mock";
+export const isApiMode = env.DATA_SOURCE === "api";
 
 // 環境變數驗證輔助函式
 export function validateRequiredEnv(key: keyof Env): string {
@@ -56,5 +89,5 @@ export function getEnvWithDefault<T>(key: string, defaultValue: T): T {
 }
 
 // 開發模式檢查
-export const isDevelopment = process.env.NODE_ENV === 'development';
-export const isProduction = process.env.NODE_ENV === 'production';
+export const isDevelopment = process.env.NODE_ENV === "development";
+export const isProduction = process.env.NODE_ENV === "production";

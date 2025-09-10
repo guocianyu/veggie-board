@@ -3,6 +3,10 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/ui/Navbar';
 import { DSProvider } from '@/components/ds/Provider';
+import { PriceModeProvider } from '@/lib/price-mode';
+import FloatingPriceMode from '@/components/FloatingPriceMode';
+import Footer from '@/components/ui/Footer';
+import Gatekeeper from '@/components/Gatekeeper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -89,10 +93,16 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} h-full flex flex-col`}>
         <DSProvider>
-          <Navbar />
-          <main className="flex-1">
-            {children}
-          </main>
+          <PriceModeProvider>
+            <Gatekeeper>
+              <Navbar />
+              <main className="flex-1">
+                {children}
+              </main>
+            </Gatekeeper>
+            <Footer />
+            <FloatingPriceMode />
+          </PriceModeProvider>
         </DSProvider>
       </body>
     </html>

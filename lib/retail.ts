@@ -23,6 +23,16 @@ export function getCategory(cropName: string): CropCategory {
     .replace(/\s+/g, '') // 移除空格
     .toLowerCase();
   
+  // 先過濾花卉類別
+  if (normalizedName.includes('花') && 
+      !normalizedName.includes('花椰菜') && 
+      !normalizedName.includes('青花菜') &&
+      !normalizedName.includes('韭菜花') &&
+      !normalizedName.includes('花胡瓜') &&
+      !normalizedName.includes('花蒲')) {
+    return 'flower'; // 花卉類別，後續會被過濾掉
+  }
+  
   // 關鍵字匹配
   if (normalizedName.includes('菜') || normalizedName.includes('葉')) {
     return 'leafy';
@@ -82,7 +92,7 @@ export function estimateRetailPrice(
   };
   
   // 計算零售價格
-  const retailPrice = wholesale * coefficients[category];
+  const retailPrice = wholesale * (category === 'flower' ? 1.0 : coefficients[category as keyof RetailCoefficients]);
   
   // 四捨五入到小數點後一位
   return Math.round(retailPrice * 10) / 10;
@@ -105,7 +115,7 @@ export function getCategoryCoefficient(
     other: coefs?.other ?? retailCoefficients.other,
   };
   
-  return coefficients[category];
+  return category === 'flower' ? 1.0 : coefficients[category as keyof RetailCoefficients];
 }
 
 /**
@@ -118,7 +128,8 @@ export function getCategoryName(category: CropCategory): string {
     leafy: '葉菜類',
     fruit: '果菜類',
     root: '根莖類',
-    other: '其他類'
+    other: '其他類',
+    flower: '花卉類'
   };
   
   return names[category];
@@ -134,7 +145,8 @@ export function getCategoryDescription(category: CropCategory): string {
     leafy: '葉菜類蔬菜，如高麗菜、青江菜等',
     fruit: '果菜類蔬果，如番茄、香蕉等',
     root: '根莖類蔬菜，如馬鈴薯、洋蔥等',
-    other: '其他類蔬果，如玉米、豆類等'
+    other: '其他類蔬果，如玉米、豆類等',
+    flower: '花卉類，如火鶴花、繡球花等'
   };
   
   return descriptions[category];

@@ -1,4 +1,5 @@
 import categoryMap from '@/aliases/category-map.json';
+import { getCategory } from '@/lib/retail';
 
 export type Group = 'veg' | 'fruit';
 
@@ -8,12 +9,25 @@ export type Group = 'veg' | 'fruit';
  * @returns 'fruit' 或 'veg'
  */
 export function getGroup(cropName: string): Group {
-  // 從 category-map.json 中查找對應的分類
+  // 先從 category-map.json 中查找對應的分類
   const category = categoryMap[cropName as keyof typeof categoryMap];
   
-  // 如果分類是 'fruit'，則返回 'fruit'，否則一律視為 'veg'
+  // 如果找到明確的分類，使用它
+  if (category === 'fruit') {
+    return 'fruit';
+  }
+  
+  // 如果沒有找到，使用 getCategory 函數的結果
+  const dynamicCategory = getCategory(cropName);
+  
+  // 根據動態分類判斷群組
+  if (dynamicCategory === 'fruit') {
+    return 'fruit';
+  }
+  
+  // 其他情況一律視為蔬菜
   // 注意：番茄、西瓜等雖然在植物學上是水果，但在台灣菜市場習慣上歸類為蔬菜
-  return category === 'fruit' ? 'fruit' : 'veg';
+  return 'veg';
 }
 
 /**

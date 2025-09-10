@@ -33,7 +33,7 @@ export type HistorySeries = {
 };
 
 // 蔬果類別型別
-export type CropCategory = 'leafy' | 'fruit' | 'root' | 'other';
+export type CropCategory = 'leafy' | 'fruit' | 'root' | 'other' | 'flower';
 
 // 零售係數型別
 export type RetailCoefficients = {

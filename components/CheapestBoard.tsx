@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import type { PriceItem } from '@/types';
 import { getGroup } from '@/lib/category';
-import { estimateRetailPrice } from '@/lib/retail';
+import { estimateRetailPrice, getCategory } from '@/lib/retail';
 import { usePriceMode } from '@/lib/price-mode';
 import { Card, CardHeader, CardContent } from '@/components/ds/Card';
 import { ListRow } from '@/components/ds/ListRow';
@@ -42,9 +42,11 @@ export default function CheapestBoard({ items }: { items: PriceItem[] }) {
 
   // 計算最便宜清單
   const { vegAll, fruitAll, vegPages, fruitPages } = useMemo(() => {
-    // 過濾：成交量 >= MIN_VOL 且價格 > 0
+    // 過濾：成交量 >= MIN_VOL 且價格 > 0，且排除花卉
     const base = items.filter(item => 
-      (item.vol ?? 0) >= MIN_VOL && priceOf(item) > 0
+      (item.vol ?? 0) >= MIN_VOL && 
+      priceOf(item) > 0 &&
+      getCategory(item.cropName) !== 'flower'
     );
 
     // 蔬菜：按價格排序，取前 50 筆

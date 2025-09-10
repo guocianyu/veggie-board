@@ -1,50 +1,55 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
-import { PriceItem } from '@/types';
-import { filterByGroup, getGroup } from '@/lib/category';
-import { formatPrice, formatPercentage } from '@/lib/format';
-import { estimateRetailPrice } from '@/lib/retail';
-import { usePriceMode } from '@/lib/price-mode';
-import { Segmented } from '@/components/ds/Segmented';
-import { Card, CardHeader, CardContent } from '@/components/ds/Card';
-import { ListRow } from '@/components/ds/ListRow';
-import { CodeBadge } from '@/components/ds/CodeBadge';
-import { PillDelta } from '@/components/ds/PillDelta';
-import CheapestBoard from '@/components/CheapestBoard';
+import React, { useState, useMemo } from "react";
+import { PriceItem } from "@/types";
+import { filterByGroup, getGroup } from "@/lib/category";
+import { formatPrice, formatPercentage } from "@/lib/format";
+import { estimateRetailPrice, getCategory } from "@/lib/retail";
+import { usePriceMode } from "@/lib/price-mode";
+import { Segmented } from "@/components/ds/Segmented";
+import { Card, CardHeader, CardContent } from "@/components/ds/Card";
+import { ListRow } from "@/components/ds/ListRow";
+import { CodeBadge } from "@/components/ds/CodeBadge";
+import { PillDelta } from "@/components/ds/PillDelta";
+import CheapestBoard from "@/components/CheapestBoard";
 
 const TOP_N = 10;
 
 interface RankRowsProps {
   items: PriceItem[];
-  defaultGroup?: 'all' | 'veg' | 'fruit';
+  defaultGroup?: "all" | "veg" | "fruit";
   topN?: number;
 }
 
-type GroupFilter = 'all' | 'veg' | 'fruit';
+type GroupFilter = "all" | "veg" | "fruit";
 
 export default function RankRows({
   items,
-  defaultGroup = 'all',
-  topN = TOP_N
+  defaultGroup = "all",
+  topN = TOP_N,
 }: RankRowsProps) {
   const [group, setGroup] = useState<GroupFilter>(defaultGroup);
   const { mode: priceMode } = usePriceMode();
 
   // Helper functions
   const priceOf = (item: PriceItem): number => {
-    return priceMode === 'wholesale'
+    return priceMode === "wholesale"
       ? item.wavg
-      : estimateRetailPrice({ cropCode: item.cropCode, cropName: item.cropName }, item.wavg);
+      : estimateRetailPrice(
+          { cropCode: item.cropCode, cropName: item.cropName },
+          item.wavg
+        );
   };
 
   const deltaAbs = (item: PriceItem): number => {
-    return Math.abs(priceOf(item) * item.dod / 100);
+    return Math.abs((priceOf(item) * item.dod) / 100);
   };
 
   // Data processing: filter -> separate gainers/losers
   const { gainers, losers } = useMemo(() => {
-    const filtered = filterByGroup(items, group);
+    // 先過濾掉花卉
+    const nonFlowerItems = items.filter(item => getCategory(item.cropName) !== 'flower');
+    const filtered = filterByGroup(nonFlowerItems, group);
 
     const sortedGainers = filtered
       .filter((item) => item.dod > 0)
@@ -59,7 +64,13 @@ export default function RankRows({
     return { gainers: sortedGainers, losers: sortedLosers };
   }, [items, group, topN]);
 
-  const RankItem = ({ item, isGainer }: { item: PriceItem; isGainer: boolean }) => {
+  const RankItem = ({
+    item,
+    isGainer,
+  }: {
+    item: PriceItem;
+    isGainer: boolean;
+  }) => {
     const currentPrice = priceOf(item);
     const delta = deltaAbs(item);
 
@@ -69,7 +80,11 @@ export default function RankRows({
           role="listitem"
           aria-disabled="true"
           className="flex items-center gap-4 rounded-xl cursor-default select-text focus-visible:outline-none"
-          aria-label={`${item.cropName} ${isGainer ? '上漲' : '下跌'} ${formatPercentage(Math.abs(item.dod))}%，均價 ${formatPrice(currentPrice)} 元/公斤`}
+          aria-label={`${item.cropName} ${
+            isGainer ? "上漲" : "下跌"
+          } ${formatPercentage(Math.abs(item.dod))}%，均價 ${formatPrice(
+            currentPrice
+          )} 元/公斤`}
         >
           {/* 左：代碼徽章 */}
           <CodeBadge code={item.cropCode} />
@@ -84,7 +99,8 @@ export default function RankRows({
                 {formatPrice(currentPrice)}
               </div>
               <div className="text-xs text-muted">
-                {isGainer ? '+' : '-'}{formatPrice(delta)}
+                {isGainer ? "+" : "-"}
+                {formatPrice(delta)}
               </div>
             </div>
             <PillDelta value={item.dod} />
@@ -102,9 +118,9 @@ export default function RankRows({
       <div className="flex justify-center">
         <Segmented
           options={[
-            { value: 'all', label: '全部' },
-            { value: 'veg', label: '蔬菜' },
-            { value: 'fruit', label: '水果' },
+            { value: "all", label: "全部" },
+            { value: "veg", label: "蔬菜" },
+            { value: "fruit", label: "水果" },
           ]}
           value={group}
           onChange={(value) => setGroup(value as GroupFilter)}
@@ -116,23 +132,31 @@ export default function RankRows({
           目前沒有資料可供顯示。請稍後再試。
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{ marginBottom: '76px', marginTop: '32px' }}>
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 gap-8"
+          style={{ marginBottom: "76px", marginTop: "32px" }}
+        >
           {/* 左欄：漲幅排行 */}
           <section aria-labelledby="gainers-heading">
             <Card>
               <CardHeader>
-                <h2 id="gainers-heading" className="text-xl font-bold text-ink mb-1">
+                <h2
+                  id="gainers-heading"
+                  className="text-xl font-bold text-ink mb-1"
+                >
                   今日漲幅 TOP {topN}
                 </h2>
-                <p className="text-sm text-muted">
-                  以漲幅百分比排序
-                </p>
+                <p className="text-sm text-muted">以漲幅百分比排序</p>
               </CardHeader>
               <CardContent className="p-0">
                 {gainers.length > 0 ? (
                   <ul className="static-list divide-y divide-black/10">
                     {gainers.map((item) => (
-                      <RankItem key={item.cropCode} item={item} isGainer={true} />
+                      <RankItem
+                        key={item.cropCode}
+                        item={item}
+                        isGainer={true}
+                      />
                     ))}
                   </ul>
                 ) : (
@@ -148,18 +172,23 @@ export default function RankRows({
           <section aria-labelledby="losers-heading">
             <Card>
               <CardHeader>
-                <h2 id="losers-heading" className="text-xl font-bold text-ink mb-1">
+                <h2
+                  id="losers-heading"
+                  className="text-xl font-bold text-ink mb-1"
+                >
                   今日跌幅 TOP {topN}
                 </h2>
-                <p className="text-sm text-muted">
-                  以跌幅百分比排序
-                </p>
+                <p className="text-sm text-muted">以跌幅百分比排序</p>
               </CardHeader>
               <CardContent className="p-0">
                 {losers.length > 0 ? (
                   <ul className="static-list divide-y divide-black/10">
                     {losers.map((item) => (
-                      <RankItem key={item.cropCode} item={item} isGainer={false} />
+                      <RankItem
+                        key={item.cropCode}
+                        item={item}
+                        isGainer={false}
+                      />
                     ))}
                   </ul>
                 ) : (
