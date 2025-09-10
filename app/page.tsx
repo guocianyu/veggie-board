@@ -1,82 +1,37 @@
-import { Suspense } from 'react';
-import { getLatest } from '@/lib/datasource';
-import { formatYMDHM } from '@/lib/time';
-import RankRows from '@/components/RankRows';
+// app/page.tsx
+'use client'
 
-// 載入中元件
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <div className="h-8 bg-gray-300 rounded-lg w-64 mx-auto mb-2 animate-pulse"></div>
-        <div className="h-4 bg-gray-300 rounded w-48 mx-auto animate-pulse"></div>
-      </div>
-      
-      <div className="flex justify-center">
-        <div className="flex rounded-3xl bg-gray-100 p-1">
-          <div className="w-20 h-10 bg-gray-200 rounded-3xl animate-pulse"></div>
-          <div className="w-20 h-10 bg-gray-200 rounded-3xl animate-pulse ml-2"></div>
-          <div className="w-20 h-10 bg-gray-200 rounded-3xl animate-pulse ml-2"></div>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <div className="h-6 bg-gray-300 rounded w-32 animate-pulse"></div>
-          <div className="flex space-x-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="w-48 h-24 bg-gray-300 rounded-3xl animate-pulse"></div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="h-6 bg-gray-300 rounded w-32 animate-pulse"></div>
-          <div className="flex space-x-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="w-48 h-24 bg-gray-300 rounded-3xl animate-pulse"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
 
-// 主要首頁元件
-export default async function HomePage() {
-  const data = await getLatest();
-  const items = data.items;
-  
-  // 時間標籤
-  const updatedLabel = formatYMDHM(data?.updatedAt);
+type Row = Record<string, any>
+
+export default function Page() {
+  const [rows, setRows] = useState<Row[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const { data, error } = await supabase.from('daily_aggregates').select('*').limit(10)
+      if (!mounted) return
+      if (error) setError(error.message)
+      setRows(data ?? [])
+      setLoading(false)
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  if (loading) return <main className="p-6">Loading…</main>
+  if (error) return <main className="p-6 text-red-600">Error: {error}</main>
 
   return (
-    <div className="min-h-screen bg-bg">
-      <div className="container mx-auto px-6 py-8">
-        {/* 右上角資料更新時間 */}
-        <div className="relative">
-          <div className="absolute right-0 top-0 pointer-events-none">
-            <div className="corner-updated-wrap" aria-live="polite">
-              <span className="corner-updated-pill text-xs text-muted" title={`台北時間 ${updatedLabel}`}>
-                <i className="dot-live" aria-hidden="true"></i>
-                最近更新：{updatedLabel} (每日更新自動一次)
-              </span>
-            </div>
-          </div>
-        </div>
-        {/* 頁面標題與副標 */}
-        <header className="hero-wrap mb-6 md:mb-8 mt-8 md:mt-12">
-          <h1 className="type-h1 stack-title" style={{ marginTop: '8px' }}>今日菜價動態</h1>
-          <p className="type-subtle stack-subtitle">
-            一眼看懂今天哪些菜漲了、哪些菜跌了
-          </p>
-        </header>
-
-        <Suspense fallback={<LoadingSkeleton />}>
-          <RankRows items={items} />
-        </Suspense>
-      </div>
-    </div>
-  );
+    <main className="p-6">
+      <h1 className="text-xl font-semibold mb-4">Supabase Rows (first 10)</h1>
+      <pre className="text-sm overflow-auto rounded border p-4 bg-gray-50">
+        {JSON.stringify(rows, null, 2)}
+      </pre>
+    </main>
+  )
 }
