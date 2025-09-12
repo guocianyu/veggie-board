@@ -1,10 +1,10 @@
 // app/page.tsx
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 
 type Row = Record<string, any>
+const tableName = process.env.NEXT_PUBLIC_SUPABASE_TABLE || 'daily_aggregates'
 
 export default function Page() {
   const [rows, setRows] = useState<Row[] | null>(null)
@@ -14,7 +14,7 @@ export default function Page() {
   useEffect(() => {
     let mounted = true
     ;(async () => {
-      const { data, error } = await supabase.from('daily_aggregates').select('*').limit(10)
+      const { data, error } = await supabase.from(tableName).select('*').limit(10)
       if (!mounted) return
       if (error) setError(error.message)
       setRows(data ?? [])
