@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { joinPresence, leavePresence, getOnlineCount } from '@/lib/presence';
 import { SOFT_CAP, HARD_CAP, RETRY_INTERVAL, CHECK_INTERVAL } from '@/lib/limits';
 import Waitroom from './Waitroom';
@@ -16,15 +16,20 @@ export default function Gatekeeper({ children }: GatekeeperProps) {
   const [showWaitroom, setShowWaitroom] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
-  // 初始化 Supabase 客戶端
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-key'
-  );
+  // 使用統一的 Supabase 客戶端
 
   // 檢查人數並決定是否顯示等候頁
   const checkCapacity = useCallback(async () => {
     try {
+      // 如果 Supabase 未初始化，直接放行
+      if (!supabase) {
+        console.log('[Gatekeeper] Supabase 未初始化，直接放行');
+        setShowWaitroom(false);
+        setOnlineCount(0);
+        setIsLoading(false);
+        return;
+      }
+
       const count = await joinPresence(supabase);
       setOnlineCount(count);
 
