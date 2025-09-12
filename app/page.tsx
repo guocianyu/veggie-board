@@ -14,12 +14,8 @@ export default function Page() {
     let mounted = true
     ;(async () => {
       try {
-        // 檢查環境變數是否為佔位符
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        
-        if (!url || !key || url.includes('your_supabase_url_here') || key.includes('your_supabase_anon_key_here')) {
-          // 使用模擬資料
+        // 如果 Supabase 客戶端未初始化，使用模擬資料
+        if (!supabase) {
           const mockData = [
             { id: '1', cropName: '高麗菜', wavg: 25.5, vol: 1500, dod: 5.2, tradeDate: '2024-01-15' },
             { id: '2', cropName: '小白菜', wavg: 18.3, vol: 800, dod: -2.1, tradeDate: '2024-01-15' },
@@ -56,7 +52,7 @@ export default function Page() {
       <h1 className="text-xl font-semibold mb-4">Supabase 測試頁面</h1>
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
         <p className="text-sm text-blue-800">
-          {process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('your_supabase_url_here') 
+          {!supabase 
             ? '⚠️ 目前顯示模擬資料，請在 .env.local 中設定真實的 Supabase 憑證' 
             : '✅ 使用 Supabase 資料庫'}
         </p>
