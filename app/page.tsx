@@ -3,6 +3,7 @@
 import { PriceItem } from '@/types'
 import { HOME_UI_VERSION } from '@/config/ui'
 import HomeLegacy from '@/components/HomeLegacy'
+import { mockData } from '@/lib/mockData'
 import { useState, useEffect } from 'react'
 
 export default function Page() {
@@ -33,18 +34,6 @@ export default function Page() {
         setError(err instanceof Error ? err.message : 'Failed to fetch data')
         
         // Fallback to mock data if live data fails
-        const mockData: PriceItem[] = [
-          { id: '1', tradeDate: '2025-09-12', cropCode: 'C001', cropName: '高麗菜', wavg: 25.5, vol: 1500, dod: 5.2, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '2', tradeDate: '2025-09-12', cropCode: 'C002', cropName: '小白菜', wavg: 18.3, vol: 800, dod: -2.1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '3', tradeDate: '2025-09-12', cropCode: 'C003', cropName: '菠菜', wavg: 32.7, vol: 600, dod: 8.5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '4', tradeDate: '2025-09-12', cropCode: 'C004', cropName: '青江菜', wavg: 22.1, vol: 900, dod: -1.3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '5', tradeDate: '2025-09-12', cropCode: 'C005', cropName: '空心菜', wavg: 28.9, vol: 700, dod: 3.7, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '6', tradeDate: '2025-09-12', cropCode: 'C006', cropName: '香蕉', wavg: 34.0, vol: 1200, dod: -3.2, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '7', tradeDate: '2025-09-12', cropCode: 'C007', cropName: '蘋果', wavg: 45.8, vol: 800, dod: 2.1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '8', tradeDate: '2025-09-12', cropCode: 'C008', cropName: '番茄', wavg: 38.2, vol: 1000, dod: -1.5, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '9', tradeDate: '2025-09-12', cropCode: 'C009', cropName: '馬鈴薯', wavg: 28.5, vol: 900, dod: 4.3, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-          { id: '10', tradeDate: '2025-09-12', cropCode: 'C010', cropName: '洋蔥', wavg: 26.7, vol: 750, dod: -2.8, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-        ]
         setData(mockData)
       } finally {
         setLoading(false)
@@ -65,21 +54,36 @@ export default function Page() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">載入資料失敗</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-sm text-gray-500">已載入備用資料</p>
-        </div>
-      </div>
-    )
-  }
-
   // 一律使用 legacy UI
   const ver = HOME_UI_VERSION
-  if (ver === 'legacy') return <HomeLegacy items={data} />
-  return <HomeLegacy items={data} /> // 強制走舊版；保底避免誤切到新 UI
+  return (
+    <>
+      {/* 錯誤提示條 */}
+      {error && (
+        <div className="sticky top-0 z-50 bg-yellow-100 border-b border-yellow-200 px-4 py-3">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="text-yellow-600 text-lg">⚠️</div>
+              <div>
+                <p className="text-sm font-medium text-yellow-800">
+                  載入資料失敗，目前顯示模擬資料
+                </p>
+                <p className="text-xs text-yellow-700">
+                  錯誤原因: {error}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-yellow-600 hover:text-yellow-800 text-lg font-bold"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {ver === 'legacy' ? <HomeLegacy items={data} /> : <HomeLegacy items={data} />}
+    </>
+  )
 }
