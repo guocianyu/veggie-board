@@ -100,13 +100,13 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
   return (
     <div>
       {/* 主要內容區域 */}
-      <div className="px-8 py-8">
+      <div className="py-8 px-4 sm:px-8 md:px-16 lg:px-24 xl:px-32 2xl:px-40">
         {/* 頁首區塊 */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
             今日菜價動態
           </h1>
-          <p className="text-lg text-gray-600 mb-4">
+          <p className="text-base sm:text-lg text-gray-600 mb-4">
             一眼看懂今天哪些菜漲了、哪些菜跌了
           </p>
           
@@ -140,11 +140,11 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
         </div>
 
         {/* 今日漲跌雙欄 */}
-        <div className="grid grid-cols-2 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-12">
           {/* 左欄：今日漲幅 TOP 10 */}
           <Card className="p-6">
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
                 今日漲幅 TOP 10
               </h3>
               <p className="text-sm text-gray-600">
@@ -168,7 +168,6 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <span className="text-sm">↑</span>
                       <span className="text-sm font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
                         {dodText}
                       </span>
@@ -182,7 +181,7 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
           {/* 右欄：今日跌幅 TOP 10 */}
           <Card className="p-6">
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
                 今日跌幅 TOP 10
               </h3>
               <p className="text-sm text-gray-600">
@@ -206,7 +205,6 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <span className="text-sm">↓</span>
                       <span className="text-sm font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full">
                         {dodText}
                       </span>
@@ -228,11 +226,11 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8">
           {/* 左欄：最便宜蔬菜 TOP 50 */}
           <Card className="p-6">
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
                 最便宜蔬菜 TOP {Math.min(vegCheapest.length, 50)}
               </h3>
               <p className="text-sm text-gray-600">
@@ -280,7 +278,7 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
           {/* 右欄：最便宜水果 TOP 50 */}
           <Card className="p-6">
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
                 最便宜水果 TOP {Math.min(fruitCheapest.length, 50)}
               </h3>
               <p className="text-sm text-gray-600">
