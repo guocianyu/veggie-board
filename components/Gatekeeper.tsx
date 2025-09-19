@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import db from '@/lib/db';
 import { joinPresence, leavePresence, getOnlineCount } from '@/lib/presence';
 import { SOFT_CAP, HARD_CAP, RETRY_INTERVAL, CHECK_INTERVAL } from '@/lib/limits';
 import Waitroom from './Waitroom';
@@ -22,7 +22,7 @@ export default function Gatekeeper({ children }: GatekeeperProps) {
   const checkCapacity = useCallback(async () => {
     try {
       // 如果 Supabase 未初始化，直接放行
-      if (!supabase) {
+      if (!db) {
         console.log('[Gatekeeper] Supabase 未初始化，直接放行');
         setShowWaitroom(false);
         setOnlineCount(0);
@@ -30,7 +30,7 @@ export default function Gatekeeper({ children }: GatekeeperProps) {
         return;
       }
 
-      const count = await joinPresence(supabase);
+      const count = await joinPresence(db);
       setOnlineCount(count);
 
       if (count >= HARD_CAP) {
@@ -53,7 +53,7 @@ export default function Gatekeeper({ children }: GatekeeperProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   // 重試邏輯
   const handleRetry = useCallback(async () => {

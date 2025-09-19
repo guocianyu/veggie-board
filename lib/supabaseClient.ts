@@ -1,27 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+// 這個檔案已棄用，請使用 lib/supabaseBrowser.ts 或 lib/db.ts
+// 保留此檔案僅為了向後相容性，但建議遷移到新的單例模式
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+import supabase from './supabaseBrowser'
 
-// 檢查是否為有效的 Supabase 憑證
-const isValidSupabaseConfig = url && 
-  anonKey && 
-  !url.includes('your_supabase_url_here') && 
-  !anonKey.includes('your_supabase_anon_key_here') &&
-  url.startsWith('https://') &&
-  anonKey.length > 20
-
-let supabase: any = null
-
-if (isValidSupabaseConfig) {
-  try {
-    supabase = createClient(url, anonKey)
-  } catch (error) {
-    console.warn('Failed to create Supabase client:', error)
-    supabase = null
-  }
-} else {
-  console.warn('Supabase credentials not configured or invalid. Using mock data mode.')
-}
-
+// 重新導出單例 client
 export { supabase }

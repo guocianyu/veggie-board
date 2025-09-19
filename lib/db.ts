@@ -1,15 +1,24 @@
 /**
  * Supabase 資料庫連線
- * 使用 Service Role Key 進行伺服端操作
+ * 使用單例模式避免重複建立 client
  */
 
-import { supabase } from './supabaseClient';
+import supabase from './supabaseBrowser'
+let db = supabase
+
+// 若要用 mock，請在 .env.local 設定 NEXT_PUBLIC_USE_MOCK=1
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_MOCK === '1') {
+  // 動態載入，避免在正式環境一起 bundle
+  // @ts-ignore
+  import('./supabaseMock').then((m) => {
+    db = m.default || m.mockSupabase
+  })
+}
 
 // 檢查環境變數，如果沒有則使用模擬數據
-const hasSupabaseConfig = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE;
+const hasSupabaseConfig = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// 使用 Supabase 單例客戶端
-export const db = supabase;
+export default db
 
 /**
  * 資料庫表格結構定義

@@ -1,18 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import db from '@/lib/db';
 
 export default function TestPage() {
   useEffect(() => {
     const testSupabaseConnection = async () => {
-      if (!supabase) {
+      if (!db) {
         console.error('Supabase client is not initialized');
         return;
       }
 
       try {
-        const { data, error } = await supabase
+        const { data, error } = await db
           .from('vegetables')
           .select('*');
 

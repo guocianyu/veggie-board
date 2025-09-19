@@ -1,10 +1,14 @@
 // 價格項目型別
 export type PriceItem = {
+  id: string;           // 唯一識別碼
+  tradeDate: string;    // 交易日期 (YYYY-MM-DD)
   cropCode: string;
   cropName: string;
-  wavg: number; // 批發均價
-  vol: number;  // 成交量
-  dod: number;  // 日漲跌幅 (%)
+  wavg: number;         // 批發均價
+  vol: number;          // 成交量
+  dod: number;          // 日漲跌幅 (%)
+  createdAt: string;    // 建立時間 (ISO string)
+  updatedAt: string;    // 更新時間 (ISO string)
 };
 
 // 最新資料載荷型別

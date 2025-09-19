@@ -4,7 +4,7 @@
  */
 
 import { AmisRow } from './amis';
-import { db } from './db';
+import db from './db';
 
 export interface DailyAggregate {
   tradeDate: string;

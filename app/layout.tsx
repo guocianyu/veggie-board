@@ -94,12 +94,12 @@ export default function RootLayout({
       <body className={`${inter.className} h-full flex flex-col`}>
         <DSProvider>
           <PriceModeProvider>
-            <Gatekeeper>
+            {/* <Gatekeeper> */}
               <Navbar />
               <main className="flex-1">
                 {children}
               </main>
-            </Gatekeeper>
+            {/* </Gatekeeper> */}
             <Footer />
             <FloatingPriceMode />
           </PriceModeProvider>

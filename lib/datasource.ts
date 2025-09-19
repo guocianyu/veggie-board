@@ -260,11 +260,15 @@ function aggregateAmisData(amisData: any[]): PriceItem[] {
       const dod = Math.round((Math.random() - 0.5) * 20 * 10) / 10; // 模擬 -10% 到 +10%
 
       result.push({
+        id: `${crop.cropCode}-${Date.now()}-${Math.random()}`,
+        tradeDate: getLatestTradeDate(amisData),
         cropCode: crop.cropCode,
         cropName: crop.cropName,
         wavg,
         vol,
         dod,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
     }
   }

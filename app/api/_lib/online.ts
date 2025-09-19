@@ -1,7 +1,7 @@
 /**
  * 線上人數檢查 API 工具
  */
-import { supabase } from '../../../lib/supabaseClient';
+import db from '../../../lib/db';
 
 // 模擬線上人數計數器（用於測試）
 let mockOnlineCount = 0;
@@ -41,12 +41,12 @@ export async function getOnlineCount(): Promise<number> {
       return mockOnlineCount;
     }
 
-    if (!supabase) {
+    if (!db) {
       console.log('[Online] Supabase 未初始化，使用模擬數據');
       return mockOnlineCount;
     }
 
-    const channel = supabase.channel('presence:vb-online');
+    const channel = db.channel('presence:vb-online');
     
     // 訂閱頻道以取得 presence 狀態
     await channel.subscribe();
