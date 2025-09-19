@@ -61,24 +61,19 @@ export default function Page() {
       {/* 錯誤提示條 */}
       {error && (
         <div className="sticky top-0 z-50 bg-yellow-100 border-b border-yellow-200 px-4 py-3">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="max-w-7xl mx-auto flex items-center justify-center">
             <div className="flex items-center space-x-3">
               <div className="text-yellow-600 text-lg">⚠️</div>
-              <div>
-                <p className="text-sm font-medium text-yellow-800">
-                  載入資料失敗，目前顯示模擬資料
-                </p>
-                <p className="text-xs text-yellow-700">
-                  錯誤原因: {error}
-                </p>
-              </div>
+              <p className="text-sm font-medium text-yellow-800">
+                載入資料失敗，目前顯示模擬資料 (錯誤原因: {error})
+              </p>
+              <button
+                onClick={() => setError(null)}
+                className="text-yellow-600 hover:text-yellow-800 text-lg font-bold ml-4"
+              >
+                ×
+              </button>
             </div>
-            <button
-              onClick={() => setError(null)}
-              className="text-yellow-600 hover:text-yellow-800 text-lg font-bold"
-            >
-              ×
-            </button>
           </div>
         </div>
       )}
