@@ -1,68 +1,73 @@
 /**
  * 線上人數檢查 API 工具
+ * 以觀察者身分訂閱與前端 Gatekeeper 相同的 Presence 頻道（不 track 自己），
+ * 每個伺服器實例只建立一條長駐 channel，持續同步人數——
+ * 不能每個請求都開新 channel（會洩漏且每次多 1 秒延遲）
  */
-import db from '../../../lib/db';
+import { RealtimeChannel } from "@supabase/supabase-js";
+import db from "../../../lib/db";
+import { PRESENCE_CHANNEL } from "../../../lib/limits";
 
-// 模擬線上人數計數器（用於測試）
-let mockOnlineCount = 0;
-let lastRequestTime = 0;
+let channel: RealtimeChannel | null = null;
+let latestCount = 0;
+let subscribing: Promise<void> | null = null;
 
-// 重置計數器
-export function resetMockCount(): void {
-  mockOnlineCount = 0;
-  lastRequestTime = 0;
+function hasSupabaseConfig(): boolean {
+  return (
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
+/**
+ * 確保 presence 頻道已訂閱（只做一次，之後靠事件持續更新 latestCount）
+ */
+function ensureSubscribed(): Promise<void> {
+  if (subscribing) return subscribing;
+
+  subscribing = new Promise<void>((resolve) => {
+    // 保底：訂閱卡住時最多等 2 秒就放行（fail-open）
+    const failSafe = setTimeout(resolve, 2000);
+
+    channel = db
+      .channel(PRESENCE_CHANNEL)
+      .on("presence", { event: "sync" }, () => {
+        latestCount = Object.keys(channel?.presenceState() ?? {}).length;
+      })
+      .subscribe((status: string) => {
+        if (status === "SUBSCRIBED") {
+          clearTimeout(failSafe);
+          // 給初始 presence 同步一點時間
+          setTimeout(resolve, 500);
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.warn(`[Online] Presence 頻道訂閱失敗: ${status}`);
+          clearTimeout(failSafe);
+          // 讓下次呼叫重新嘗試訂閱
+          subscribing = null;
+          channel = null;
+          resolve();
+        }
+      });
+  });
+
+  return subscribing;
 }
 
 /**
  * 取得目前線上人數
+ * Supabase 未設定或訂閱失敗時回傳 0（不做限流）——絕不編造假人數
  */
 export async function getOnlineCount(): Promise<number> {
+  if (!hasSupabaseConfig()) {
+    return 0;
+  }
+
   try {
-    // 在沒有 Supabase 配置時，使用模擬數據進行測試
-    if (!process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('mock')) {
-      // 重置為正常模式：每次請求增加 1-2 人，模擬正常使用
-      const now = Date.now();
-      if (now - lastRequestTime > 100) { // 100ms 內只增加一次
-        mockOnlineCount += Math.floor(Math.random() * 2) + 1; // 1-2 人
-        lastRequestTime = now;
-      }
-      
-      // 模擬一些人離開（較少機率減少）
-      if (Math.random() < 0.1) { // 10% 機率減少
-        mockOnlineCount = Math.max(0, mockOnlineCount - Math.floor(Math.random() * 2));
-      }
-      
-      // 確保人數不會過高
-      if (mockOnlineCount > 100) {
-        mockOnlineCount = Math.floor(Math.random() * 20) + 10; // 10-30 之間
-      }
-      
-      console.log(`[Online] 模擬線上人數: ${mockOnlineCount}`);
-      return mockOnlineCount;
-    }
-
-    if (!db) {
-      console.log('[Online] Supabase 未初始化，使用模擬數據');
-      return mockOnlineCount;
-    }
-
-    const channel = db.channel('presence:vb-online');
-    
-    // 訂閱頻道以取得 presence 狀態
-    await channel.subscribe();
-    
-    // 等待一下讓 presence 同步
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const presenceState = channel.presenceState();
-    const count = Object.keys(presenceState).length;
-    
-    console.log(`[Online] 目前線上人數: ${count}`);
-    return count;
+    await ensureSubscribed();
+    return latestCount;
   } catch (error) {
-    console.error('[Online] 檢查線上人數異常:', error);
+    console.error("[Online] 檢查線上人數異常:", error);
     // 發生錯誤時允許通過，避免完全無法使用
     return 0;
   }
 }
-
