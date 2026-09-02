@@ -163,7 +163,8 @@ const getLatestFromAmisCached = unstable_cache(
     // 否則拿近乎空日當比較基準會算出數百 % 的荒謬漲跌幅
     const MIN_ROWS_PER_DAY = 50;
     // 總時間預算：政府 API 卡住時要及早放棄，避免超過 serverless 60 秒上限
-    const TIME_BUDGET_MS = 40_000;
+    // （最後一天最壞情況約再花 25 秒，25+25 仍在 60 秒內）
+    const TIME_BUDGET_MS = 25_000;
     const startedAt = Date.now();
     const amisData: AmisRow[] = [];
     let tradedDayCount = 0;

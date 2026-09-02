@@ -105,7 +105,7 @@ async function fetchAmisMarketDay(
   const response = await fetch(`${AMIS_API_URL}?${params.toString()}`, {
     method: "GET",
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000), // 10秒超時
+    signal: AbortSignal.timeout(12000), // 12秒超時（政府 API 從 Vercel 連線偏慢）
     // 快取 30 分鐘，避免每個訪客都直接打政府 API
     next: { revalidate: 1800 },
   });
@@ -138,7 +138,7 @@ async function fetchMarketDayWithRetry(
 
 /**
  * 抓取單一日期指定市場的完整資料
- * 併發上限 2：政府 API 承受不了高併發，實測併發過高會大量逾時
+ * 併發上限 4：政府 API 承受不了高併發（實測 20 個併發大量逾時），4 個尚可
  * @param dateStr 日期 (YYYY-MM-DD)
  * @param markets 市場清單，預設北部四大市場（即時查詢用）；背景 ingest 傳 AMIS_ALL_MARKETS
  */
@@ -149,7 +149,7 @@ export async function fetchAmisByDay(
   const queue = [...markets];
   const rows: AmisRow[] = [];
 
-  const workers = Array.from({ length: 2 }, async () => {
+  const workers = Array.from({ length: Math.min(4, markets.length) }, async () => {
     while (queue.length > 0) {
       const market = queue.shift()!;
       try {

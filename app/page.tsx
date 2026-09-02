@@ -11,6 +11,7 @@ export default function Page() {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [tradeDate, setTradeDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [slowLoad, setSlowLoad] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchLiveData = useCallback(async () => {
@@ -46,12 +47,27 @@ export default function Page() {
     fetchLiveData()
   }, [fetchLiveData])
 
+  // 載入超過 5 秒時顯示提示，讓使用者知道不是壞掉
+  useEffect(() => {
+    if (!loading) {
+      setSlowLoad(false)
+      return
+    }
+    const timer = setTimeout(() => setSlowLoad(true), 5000)
+    return () => clearTimeout(timer)
+  }, [loading])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p className="text-gray-600">載入最新菜價資料中...</p>
+          {slowLoad && (
+            <p className="text-sm text-gray-400 mt-2 max-w-xs mx-auto">
+              正在向農業部取得最新資料，政府資料源較慢，最多可能需要一分鐘，請稍候
+            </p>
+          )}
         </div>
       </div>
     )
