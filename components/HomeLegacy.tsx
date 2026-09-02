@@ -11,11 +11,16 @@ import { CodeBadge } from '@/components/ds/CodeBadge';
 
 interface HomeLegacyProps {
   items: PriceItem[];
+  coverage?: 'national' | 'north';
 }
 
 type GroupFilter = 'all' | 'veg' | 'fruit';
 
-export default function HomeLegacy({ items }: HomeLegacyProps) {
+export default function HomeLegacy({ items, coverage = 'north' }: HomeLegacyProps) {
+  const coverageLabel =
+    coverage === 'national'
+      ? '全台批發市場'
+      : '北部批發市場（台北一、台北二、三重、板橋）';
   const { mode } = usePriceMode();
   const [group, setGroup] = useState<GroupFilter>('all');
   const [vegPage, setVegPage] = useState(1);
@@ -82,11 +87,9 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
     return { text: `${sign}${formatted}`, isPositive: dod >= 0 };
   };
 
-  // 格式化貨幣
+  // 格式化貨幣（不用 currency style，避免出現「NT$427 元/公斤」的雙重幣別標示）
   const formatCurrency = (value: number): string => {
     const formatted = new Intl.NumberFormat('zh-TW', {
-      style: 'currency',
-      currency: 'TWD',
       maximumFractionDigits: 0
     }).format(value);
     return `${formatted} 元/公斤`;
@@ -163,7 +166,8 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                           {item.cropName}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {formatPrice(item.wavg)}元/公斤
+                          {formatPrice(priceOf(item))}
+                          {mode !== 'wholesale' && <span className="ml-1">(估算)</span>}
                         </div>
                       </div>
                     </div>
@@ -200,7 +204,8 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                           {item.cropName}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {formatPrice(item.wavg)}元/公斤
+                          {formatPrice(priceOf(item))}
+                          {mode !== 'wholesale' && <span className="ml-1">(估算)</span>}
                         </div>
                       </div>
                     </div>
@@ -234,7 +239,7 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                 最便宜蔬菜 TOP {Math.min(vegCheapest.length, 50)}
               </h3>
               <p className="text-sm text-gray-600">
-                以我會買到的價格排序
+                以{mode === 'wholesale' ? '批發價' : '我會買到的價格'}排序
               </p>
             </div>
             <div className="space-y-1">
@@ -250,9 +255,11 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                     <div className="text-sm font-medium text-gray-900">
                       {formatCurrency(priceOf(item))}
                     </div>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      估算
-                    </span>
+                    {mode !== 'wholesale' && (
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        估算
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -282,7 +289,7 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                 最便宜水果 TOP {Math.min(fruitCheapest.length, 50)}
               </h3>
               <p className="text-sm text-gray-600">
-                以我會買到的價格排序
+                以{mode === 'wholesale' ? '批發價' : '我會買到的價格'}排序
               </p>
             </div>
             <div className="space-y-1">
@@ -298,9 +305,11 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
                     <div className="text-sm font-medium text-gray-900">
                       {formatCurrency(priceOf(item))}
                     </div>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      估算
-                    </span>
+                    {mode !== 'wholesale' && (
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        估算
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -334,7 +343,7 @@ export default function HomeLegacy({ items }: HomeLegacyProps) {
           <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
             <span className="w-4 h-4 bg-gray-400 rounded-full flex items-center justify-center text-xs text-white">i</span>
             <span>
-              只看今天全台批發市場賣得夠多的品項(總成交量 ≥ 500公斤), 把你大概會買到的價錢從便宜排到貴。
+              只看今天{coverageLabel}賣得夠多的品項(總成交量 ≥ 500公斤), 把你大概會買到的價錢從便宜排到貴。
             </span>
           </div>
         </div>
