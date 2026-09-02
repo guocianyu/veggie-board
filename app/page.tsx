@@ -3,45 +3,44 @@
 import { PriceItem } from '@/types'
 import { HOME_UI_VERSION } from '@/config/ui'
 import HomeLegacy from '@/components/HomeLegacy'
-import { mockData } from '@/lib/mockData'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export default function Page() {
   const [data, setData] = useState<PriceItem[]>([])
+  const [coverage, setCoverage] = useState<'national' | 'north'>('north')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchLiveData = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/data/latest')
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        
-        const result = await response.json()
-        
-        if (result.error) {
-          throw new Error(result.message || result.error)
-        }
-        
-        setData(result.items || [])
-        setError(null)
-      } catch (err) {
-        console.error('Failed to fetch live data:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch data')
-        
-        // Fallback to mock data if live data fails
-        setData(mockData)
-      } finally {
-        setLoading(false)
-      }
-    }
+  const fetchLiveData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/data/latest')
 
-    fetchLiveData()
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (result.error) {
+        throw new Error(result.message || result.error)
+      }
+
+      setData(result.items || [])
+      setCoverage(result.coverage === 'national' ? 'national' : 'north')
+      setError(null)
+    } catch (err) {
+      console.error('Failed to fetch live data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch data')
+      setData([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchLiveData()
+  }, [fetchLiveData])
 
   if (loading) {
     return (
@@ -54,31 +53,32 @@ export default function Page() {
     )
   }
 
+  // 載入失敗時不顯示任何價格，避免使用者拿到錯誤的參考價
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">無法載入菜價資料</h1>
+          <p className="text-sm text-gray-600 mb-6">
+            目前無法取得最新菜價（{error}）。為了避免顯示錯誤的價格，暫時不顯示任何資料，請稍後再試。
+          </p>
+          <button
+            onClick={fetchLiveData}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
+            重新載入
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // 一律使用 legacy UI
   const ver = HOME_UI_VERSION
-  return (
-    <>
-      {/* 錯誤提示條 */}
-      {error && (
-        <div className="sticky top-0 z-50 bg-yellow-100 border-b border-yellow-200 px-4 py-3">
-          <div className="max-w-7xl mx-auto flex items-center justify-center">
-            <div className="flex items-center space-x-3">
-              <div className="text-yellow-600 text-lg">⚠️</div>
-              <p className="text-sm font-medium text-yellow-800">
-                載入資料失敗，目前顯示模擬資料 (錯誤原因: {error})
-              </p>
-              <button
-                onClick={() => setError(null)}
-                className="text-yellow-600 hover:text-yellow-800 text-lg font-bold ml-4"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {ver === 'legacy' ? <HomeLegacy items={data} /> : <HomeLegacy items={data} />}
-    </>
+  return ver === 'legacy' ? (
+    <HomeLegacy items={data} coverage={coverage} />
+  ) : (
+    <HomeLegacy items={data} coverage={coverage} />
   )
 }

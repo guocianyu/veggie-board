@@ -10,6 +10,8 @@ import { HARD_CAP, API_BUFFER, RETRY_AFTER } from "@/lib/limits";
 import { getCategory } from "@/lib/retail";
 
 export const dynamic = "force-dynamic"; // Next 14
+// 快取過期後第一個請求需要重抓政府 API（約 10~20 秒），拉高執行時間上限避免被砍
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,6 +54,7 @@ export async function GET(request: NextRequest) {
       updatedAt: latestData.updatedAt,
       tradeDate: latestData.tradeDate,
       scope: latestData.scope,
+      coverage: latestData.coverage,
       items: filteredItems,
       onlineCount, // 回傳目前線上人數供前端參考
     };

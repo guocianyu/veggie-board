@@ -16,6 +16,7 @@ export type LatestPayload = {
   updatedAt: string;    // 更新時間 (ISO string)
   tradeDate: string;    // 交易日期 (YYYY-MM-DD)
   scope: 'TW';          // 資料範圍
+  coverage?: 'national' | 'north'; // 市場涵蓋：national=全部19市場(資料庫), north=北部四市場(即時抓取)
   items: PriceItem[];   // 價格項目列表
 };
 

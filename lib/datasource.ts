@@ -1,7 +1,9 @@
 import { LatestPayload, HistorySeries, PriceItem } from "@/types";
 import { isMockMode } from "./env";
 import { headers } from "next/headers";
-import { fetchAmisByDateRange } from "./amis";
+import { unstable_cache } from "next/cache";
+import { fetchAmisByDateRange, fetchAmisByDay, AmisRow } from "./amis";
+import { getSupabaseServer } from "./supabaseServer";
 
 /**
  * 解析基礎 URL（伺服端）
@@ -62,49 +64,19 @@ export async function getLatest(): Promise<LatestPayload> {
       };
     }
   } else {
-    // 直接從農業部 API 取得最新資料
+    // 優先讀資料庫（每日 ingest 寫入的全國彙總，涵蓋全部 19 個市場）
     try {
-      console.log("[Datasource] 直接從農業部 API 取得資料");
-
-      // 計算查詢日期範圍（今天和前2天）
-      const today = new Date();
-      const threeDaysAgo = new Date(today);
-      threeDaysAgo.setDate(today.getDate() - 2);
-
-      const startDate = threeDaysAgo.toISOString().split("T")[0];
-      const endDate = today.toISOString().split("T")[0];
-
-      // 從農業部 API 抓取資料
-      const amisData = await fetchAmisByDateRange(startDate, endDate);
-
-      console.log(amisData);
-
-      if (amisData.length === 0) {
-        console.warn("[Datasource] 農業部 API 沒有回傳資料");
-        return {
-          updatedAt: new Date().toISOString(),
-          tradeDate: endDate,
-          scope: "TW",
-          items: [],
-        };
+      const fromDb = await getLatestFromDb();
+      if (fromDb && fromDb.items.length > 0) {
+        return fromDb;
       }
+    } catch (error) {
+      console.warn("[Datasource] 讀取資料庫失敗，改用即時 API:", error);
+    }
 
-      // 聚合資料：按作物分組計算加權平均價和總交易量
-      const aggregatedData = aggregateAmisData(amisData);
-
-      // 找出最新的交易日
-      const latestTradeDate = getLatestTradeDate(amisData);
-
-      console.log(
-        `[Datasource] 成功處理 ${amisData.length} 筆原始資料，聚合為 ${aggregatedData.length} 筆`
-      );
-
-      return {
-        updatedAt: new Date().toISOString(),
-        tradeDate: latestTradeDate,
-        scope: "TW",
-        items: aggregatedData,
-      };
+    // 資料庫沒資料時 fallback：即時抓北部四大市場（結果快取 30 分鐘）
+    try {
+      return await getLatestFromAmisCached();
     } catch (error) {
       console.error("從農業部 API 取得資料失敗:", error);
       // 回傳空資料作為 fallback
@@ -117,6 +89,129 @@ export async function getLatest(): Promise<LatestPayload> {
     }
   }
 }
+
+/**
+ * 從資料庫讀最新交易日的全國彙總（dod 已在 ingest 時算好）
+ * @returns 資料庫未設定或沒資料時回傳 null
+ */
+async function getLatestFromDb(): Promise<LatestPayload | null> {
+  const db = getSupabaseServer();
+  if (!db) return null;
+
+  // 找最新交易日
+  const { data: latest, error: dateError } = await db
+    .from("daily_aggregates")
+    .select("trade_date, updated_at")
+    .order("trade_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (dateError) {
+    throw new Error(`查詢最新交易日失敗: ${dateError.message}`);
+  }
+  if (!latest) return null;
+
+  // 撈該日全部彙總（約 600~800 筆）
+  const { data: rows, error: rowsError } = await db
+    .from("daily_aggregates")
+    .select("trade_date, crop_code, crop_name, wavg, vol, dod")
+    .eq("trade_date", latest.trade_date)
+    .limit(2000);
+
+  if (rowsError) {
+    throw new Error(`查詢彙總資料失敗: ${rowsError.message}`);
+  }
+  if (!rows || rows.length === 0) return null;
+
+  const items: PriceItem[] = rows.map((row) => ({
+    id: `${row.crop_code}-${row.trade_date}`,
+    tradeDate: row.trade_date,
+    cropCode: row.crop_code,
+    cropName: row.crop_name,
+    wavg: Number(row.wavg),
+    vol: Number(row.vol),
+    dod: Number(row.dod),
+    createdAt: latest.updated_at ?? new Date().toISOString(),
+    updatedAt: latest.updated_at ?? new Date().toISOString(),
+  }));
+
+  console.log(
+    `[Datasource] 從資料庫取得 ${items.length} 筆彙總（交易日 ${latest.trade_date}）`
+  );
+
+  return {
+    updatedAt: latest.updated_at ?? new Date().toISOString(),
+    tradeDate: latest.trade_date,
+    scope: "TW",
+    coverage: "national",
+    items: items.sort((a, b) => b.vol - a.vol),
+  };
+}
+
+/**
+ * 從農業部 API 抓取並聚合最新資料
+ * 用 unstable_cache 快取 30 分鐘：政府 API 慢（單一請求 1~2 秒）且承受不了高併發，
+ * 不能讓每個訪客的請求都直接打政府 API
+ */
+const getLatestFromAmisCached = unstable_cache(
+  async (): Promise<LatestPayload> => {
+    console.log("[Datasource] 直接從農業部 API 取得資料");
+
+    // 從今天往回逐日查詢，收集最近兩個有交易的日期（跨過休市日），
+    // 用最新交易日的價格顯示、前一交易日計算真實日漲跌幅
+    // 筆數過少的日子（如週一北部市場僅零星交易）視同休市，
+    // 否則拿近乎空日當比較基準會算出數百 % 的荒謬漲跌幅
+    const MIN_ROWS_PER_DAY = 50;
+    const amisData: AmisRow[] = [];
+    let tradedDayCount = 0;
+
+    for (let offset = 0; offset < 7 && tradedDayCount < 2; offset++) {
+      const day = new Date();
+      day.setDate(day.getDate() - offset);
+      const dateStr = day.toISOString().split("T")[0];
+
+      const rows = await fetchAmisByDay(dateStr);
+      if (rows.length >= MIN_ROWS_PER_DAY) {
+        amisData.push(...rows);
+        tradedDayCount += 1;
+      } else if (rows.length > 0) {
+        console.log(
+          `[Datasource] ${dateStr} 僅 ${rows.length} 筆，視同休市不列入`
+        );
+      }
+    }
+
+    if (amisData.length === 0) {
+      console.warn("[Datasource] 農業部 API 沒有回傳資料");
+      return {
+        updatedAt: new Date().toISOString(),
+        tradeDate: new Date().toISOString().split("T")[0],
+        scope: "TW",
+        items: [],
+      };
+    }
+
+    // 聚合資料：按作物分組計算加權平均價和總交易量
+    const aggregatedData = aggregateAmisData(amisData);
+
+    // 找出最新的交易日
+    const latestTradeDate = getLatestTradeDate(amisData);
+
+    console.log(
+      `[Datasource] 成功處理 ${amisData.length} 筆原始資料，聚合為 ${aggregatedData.length} 筆`
+    );
+
+    return {
+      updatedAt: new Date().toISOString(),
+      tradeDate: latestTradeDate,
+      scope: "TW",
+      coverage: "north",
+      items: aggregatedData,
+    };
+  },
+  ["amis-latest-v3"],
+  { revalidate: 1800 }
+);
 
 /**
  * 取得特定作物的歷史價格資料
@@ -214,7 +309,8 @@ export async function getHistory(
 }
 
 /**
- * 聚合 AMIS 資料：按作物分組計算加權平均價和總交易量
+ * 聚合 AMIS 資料：按作物＋交易日分組計算每日加權平均價，
+ * 以各作物「最新交易日」的價量為準，並與「前一個有交易的日期」比較算出真實日漲跌幅
  */
 function aggregateAmisData(amisData: any[]): PriceItem[] {
   const cropMap = new Map<
@@ -222,13 +318,11 @@ function aggregateAmisData(amisData: any[]): PriceItem[] {
     {
       cropCode: string;
       cropName: string;
-      totalPrice: number;
-      totalVolume: number;
-      count: number;
+      days: Map<string, { totalPrice: number; totalVolume: number }>;
     }
   >();
 
-  // 按作物分組並累加
+  // 按作物、再按交易日分組累加
   for (const item of amisData) {
     const key = item.cropCode;
 
@@ -236,41 +330,57 @@ function aggregateAmisData(amisData: any[]): PriceItem[] {
       cropMap.set(key, {
         cropCode: item.cropCode,
         cropName: item.cropName,
-        totalPrice: 0,
-        totalVolume: 0,
-        count: 0,
+        days: new Map(),
       });
     }
 
     const crop = cropMap.get(key)!;
-    crop.totalPrice += item.price * item.volume; // 加權計算
-    crop.totalVolume += item.volume;
-    crop.count += 1;
+    if (!crop.days.has(item.tradeDate)) {
+      crop.days.set(item.tradeDate, { totalPrice: 0, totalVolume: 0 });
+    }
+
+    const day = crop.days.get(item.tradeDate)!;
+    day.totalPrice += item.price * item.volume; // 加權計算
+    day.totalVolume += item.volume;
   }
 
   // 轉換為 PriceItem 格式
   const result: PriceItem[] = [];
 
-  for (const [cropCode, crop] of Array.from(cropMap.entries())) {
-    if (crop.totalVolume > 0) {
-      const wavg = Math.round((crop.totalPrice / crop.totalVolume) * 10) / 10;
-      const vol = crop.totalVolume;
+  for (const crop of Array.from(cropMap.values())) {
+    // 該作物有交易量的日期，由新到舊排序
+    const tradedDates = Array.from(crop.days.entries())
+      .filter(([, day]) => day.totalVolume > 0)
+      .sort(([a], [b]) => b.localeCompare(a));
 
-      // 簡化的日漲跌幅計算（這裡可以根據實際需求調整）
-      const dod = Math.round((Math.random() - 0.5) * 20 * 10) / 10; // 模擬 -10% 到 +10%
+    if (tradedDates.length === 0) continue;
 
-      result.push({
-        id: `${crop.cropCode}-${Date.now()}-${Math.random()}`,
-        tradeDate: getLatestTradeDate(amisData),
-        cropCode: crop.cropCode,
-        cropName: crop.cropName,
-        wavg,
-        vol,
-        dod,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+    const [latestDate, latestDay] = tradedDates[0];
+    const wavg =
+      Math.round((latestDay.totalPrice / latestDay.totalVolume) * 10) / 10;
+    const vol = latestDay.totalVolume;
+
+    // 與前一個交易日比較計算日漲跌幅；沒有可比較的日期則視為持平
+    let dod = 0;
+    if (tradedDates.length > 1) {
+      const [, prevDay] = tradedDates[1];
+      const prevWavg = prevDay.totalPrice / prevDay.totalVolume;
+      if (prevWavg > 0) {
+        dod = Math.round(((wavg - prevWavg) / prevWavg) * 100 * 10) / 10;
+      }
     }
+
+    result.push({
+      id: `${crop.cropCode}-${latestDate}`,
+      tradeDate: latestDate,
+      cropCode: crop.cropCode,
+      cropName: crop.cropName,
+      wavg,
+      vol,
+      dod,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   // 按交易量排序
@@ -339,25 +449,34 @@ function aggregateDailyData(cropData: any[]): Array<{
     dod: number;
   }> = [];
 
-  for (const [date, day] of Array.from(dailyMap.entries())) {
-    if (day.totalVolume > 0) {
-      const wavg = Math.round((day.totalPrice / day.totalVolume) * 10) / 10;
-      const vol = day.totalVolume;
+  // 先按日期由舊到新排序，才能逐日與前一交易日比較
+  const sortedDays = Array.from(dailyMap.entries())
+    .filter(([, day]) => day.totalVolume > 0)
+    .sort(([a], [b]) => a.localeCompare(b));
 
-      // 簡化的日漲跌幅計算
-      const dod = Math.round((Math.random() - 0.5) * 20 * 10) / 10;
+  let prevWavg: number | null = null;
 
-      result.push({
-        date,
-        wavg,
-        vol,
-        dod,
-      });
-    }
+  for (const [date, day] of sortedDays) {
+    const wavg = Math.round((day.totalPrice / day.totalVolume) * 10) / 10;
+    const vol = day.totalVolume;
+
+    // 與前一個交易日比較計算日漲跌幅；第一天沒有比較基準則視為持平
+    const dod =
+      prevWavg && prevWavg > 0
+        ? Math.round(((wavg - prevWavg) / prevWavg) * 100 * 10) / 10
+        : 0;
+
+    result.push({
+      date,
+      wavg,
+      vol,
+      dod,
+    });
+
+    prevWavg = wavg;
   }
 
-  // 按日期排序
-  return result.sort((a, b) => a.date.localeCompare(b.date));
+  return result;
 }
 
 /**

@@ -1,16 +1,37 @@
 /**
  * 每日資料擷取 API
  * 支援 Vercel Cron（GET）與手動觸發（POST + Bearer）
+ * 抓取全部 19 個市場的資料寫入 Supabase；可用 ?date=YYYY-MM-DD 手動補抓單日
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { fetchAmisByDateRange } from "@/lib/amis";
+import { NextResponse } from "next/server";
+import { ingestDay, writeLedger, IngestResult } from "@/lib/ingest";
+import { getSupabaseServer } from "@/lib/supabaseServer";
+
+export const dynamic = "force-dynamic";
+// 全部市場循序抓一天約 20~30 秒，最多抓兩天
+export const maxDuration = 300;
 
 export async function GET(req: Request) {
   return handle(req);
 }
 export async function POST(req: Request) {
   return handle(req);
+}
+
+/**
+ * 台灣時區的今天日期 (YYYY-MM-DD)
+ */
+function taiwanToday(): Date {
+  const now = new Date();
+  return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+}
+
+function toDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 async function handle(req: Request) {
@@ -20,7 +41,8 @@ async function handle(req: Request) {
     // 1. 驗證授權：Vercel Cron 或手動觸發
     const isCron = req.headers.get("x-vercel-cron") != null;
     const auth = req.headers.get("authorization") || "";
-    const hasSecret = auth === `Bearer ${process.env.CRON_SECRET}`;
+    const hasSecret =
+      !!process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`;
 
     if (!isCron && !hasSecret) {
       console.error("[CRON] 未授權的請求");
@@ -30,52 +52,84 @@ async function handle(req: Request) {
       );
     }
 
-    // 2. 計算目標日期（台灣今天 + 前2天）
-    const now = new Date();
-    const taiwanTime = new Date(
-      now.toLocaleString("en-US", { timeZone: "Asia/Taipei" })
-    );
+    const db = getSupabaseServer();
+    if (!db) {
+      return NextResponse.json(
+        { ok: false, error: "Supabase 未設定（缺 SUPABASE_SERVICE_ROLE_KEY）" },
+        { status: 500 }
+      );
+    }
 
-    const targetDates = [];
-    for (let i = 0; i < 3; i++) {
-      const date = new Date(taiwanTime);
-      date.setDate(date.getDate() - i);
-      targetDates.push(date.toISOString().split("T")[0]);
+    // 2. 決定目標日期
+    const url = new URL(req.url);
+    const manualDate = url.searchParams.get("date");
+
+    let targetDates: string[];
+
+    if (manualDate) {
+      // 手動補抓指定單日
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(manualDate)) {
+        return NextResponse.json(
+          { ok: false, error: "date 格式須為 YYYY-MM-DD" },
+          { status: 400 }
+        );
+      }
+      targetDates = [manualDate];
+    } else {
+      // 例行執行：台灣今天＋回補最近 3 天內資料庫還沒有的日期（最多抓 2 天）
+      const candidates: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const d = taiwanToday();
+        d.setDate(d.getDate() - i);
+        candidates.push(toDateStr(d));
+      }
+
+      const { data: existing } = await db
+        .from("daily_aggregates")
+        .select("trade_date")
+        .in("trade_date", candidates);
+
+      const existingDates = new Set(
+        (existing || []).map((r: { trade_date: string }) => r.trade_date)
+      );
+
+      // 今天永遠重抓（當天資料會隨時間更新），其他日期只補缺的
+      targetDates = candidates
+        .filter((date, index) => index === 0 || !existingDates.has(date))
+        .slice(0, 2);
     }
 
     console.log(`[CRON] 開始每日資料擷取，目標日期: ${targetDates.join(", ")}`);
 
-    // 3. 抓取 AMIS 資料
-    const amisData = await fetchAmisByDateRange(targetDates[2], targetDates[0]);
-    console.log(`[CRON] 成功抓取 ${amisData.length} 筆 AMIS 資料`);
+    // 3. 逐日抓取並寫入
+    const results: IngestResult[] = [];
+    for (const date of targetDates) {
+      results.push(await ingestDay(date));
+    }
 
-    // 4. 直接從農業部 API 取得資料，無需存儲到數據庫
-    // 資料會在前端請求時即時從農業部 API 獲取
-
-    // 5. 記錄成功日誌
     const tookMs = Date.now() - startTime;
-    console.log(
-      `[CRON] 每日資料擷取完成，處理 ${amisData.length} 筆資料，耗時 ${tookMs}ms`
-    );
+    const totalRows = results.reduce((sum, r) => sum + r.marketRows, 0);
 
-    // 6. 回傳結果
+    await writeLedger("success", `寫入 ${totalRows} 筆明細`, {
+      results,
+      tookMs,
+    });
+
     const response = {
       ok: true,
-      dates: targetDates,
-      inserted: amisData.length,
-      message: "資料已從農業部 API 成功取得",
+      results,
       ranAt: new Date().toISOString(),
       tookMs,
     };
 
     console.log(`[CRON] 每日資料擷取完成:`, response);
-
     return NextResponse.json(response);
   } catch (error) {
     const tookMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : "未知錯誤";
 
     console.error("[CRON] 每日資料擷取失敗:", error);
+    await writeLedger("error", errorMessage, { tookMs });
 
     return NextResponse.json(
       {
