@@ -162,10 +162,18 @@ const getLatestFromAmisCached = unstable_cache(
     // 筆數過少的日子（如週一北部市場僅零星交易）視同休市，
     // 否則拿近乎空日當比較基準會算出數百 % 的荒謬漲跌幅
     const MIN_ROWS_PER_DAY = 50;
+    // 總時間預算：政府 API 卡住時要及早放棄，避免超過 serverless 60 秒上限
+    const TIME_BUDGET_MS = 40_000;
+    const startedAt = Date.now();
     const amisData: AmisRow[] = [];
     let tradedDayCount = 0;
 
     for (let offset = 0; offset < 7 && tradedDayCount < 2; offset++) {
+      if (Date.now() - startedAt > TIME_BUDGET_MS) {
+        console.warn("[Datasource] 超過時間預算，停止往前查詢");
+        break;
+      }
+
       const day = new Date();
       day.setDate(day.getDate() - offset);
       const dateStr = day.toISOString().split("T")[0];
@@ -182,13 +190,9 @@ const getLatestFromAmisCached = unstable_cache(
     }
 
     if (amisData.length === 0) {
-      console.warn("[Datasource] 農業部 API 沒有回傳資料");
-      return {
-        updatedAt: new Date().toISOString(),
-        tradeDate: new Date().toISOString().split("T")[0],
-        scope: "TW",
-        items: [],
-      };
+      // 拋錯而非回傳空資料：unstable_cache 不會快取例外，
+      // 否則一次失敗會被快取 30 分鐘，期間所有人都拿到空資料
+      throw new Error("農業部 API 無法取得任何交易資料");
     }
 
     // 聚合資料：按作物分組計算加權平均價和總交易量
@@ -209,7 +213,7 @@ const getLatestFromAmisCached = unstable_cache(
       items: aggregatedData,
     };
   },
-  ["amis-latest-v3"],
+  ["amis-latest-v4"],
   { revalidate: 1800 }
 );
 
