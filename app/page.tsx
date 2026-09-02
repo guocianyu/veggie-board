@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback } from 'react'
 export default function Page() {
   const [data, setData] = useState<PriceItem[]>([])
   const [coverage, setCoverage] = useState<'national' | 'north'>('north')
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null)
+  const [tradeDate, setTradeDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,6 +30,8 @@ export default function Page() {
 
       setData(result.items || [])
       setCoverage(result.coverage === 'national' ? 'national' : 'north')
+      setUpdatedAt(result.updatedAt || null)
+      setTradeDate(result.tradeDate || null)
       setError(null)
     } catch (err) {
       console.error('Failed to fetch live data:', err)
@@ -77,8 +81,8 @@ export default function Page() {
   // 一律使用 legacy UI
   const ver = HOME_UI_VERSION
   return ver === 'legacy' ? (
-    <HomeLegacy items={data} coverage={coverage} />
+    <HomeLegacy items={data} coverage={coverage} updatedAt={updatedAt} tradeDate={tradeDate} />
   ) : (
-    <HomeLegacy items={data} coverage={coverage} />
+    <HomeLegacy items={data} coverage={coverage} updatedAt={updatedAt} tradeDate={tradeDate} />
   )
 }

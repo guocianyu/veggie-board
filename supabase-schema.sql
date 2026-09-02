@@ -33,16 +33,10 @@ CREATE TABLE IF NOT EXISTS vegetables (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 插入一些測試資料
-INSERT INTO daily_aggregates (id, trade_date, crop_code, crop_name, wavg, vol, dod) VALUES
-('1', CURRENT_DATE, 'C001', '高麗菜', 25.5, 1500, 5.2),
-('2', CURRENT_DATE, 'C002', '小白菜', 18.3, 800, -2.1),
-('3', CURRENT_DATE, 'C003', '菠菜', 32.7, 600, 8.5),
-('4', CURRENT_DATE, 'C004', '青江菜', 22.1, 900, -1.3),
-('5', CURRENT_DATE, 'C005', '空心菜', 28.9, 700, 3.7)
-ON CONFLICT (id) DO NOTHING;
+-- 注意：絕不可在此塞入假的價格資料——daily_aggregates 的內容會直接顯示為「最新菜價」，
+-- 假資料曾被當成真實行情顯示在線上。真實資料由 /api/jobs/daily-ingest 每日寫入。
 
--- 插入測試蔬菜資料
+-- 插入測試蔬菜資料（vegetables 僅為連線測試用表，不會顯示在網站上）
 INSERT INTO vegetables (id, name, category, price) VALUES
 ('1', '高麗菜', '葉菜類', 25.5),
 ('2', '小白菜', '葉菜類', 18.3),
@@ -56,4 +50,5 @@ CREATE INDEX IF NOT EXISTS idx_daily_aggregates_trade_date ON daily_aggregates(t
 CREATE INDEX IF NOT EXISTS idx_daily_aggregates_crop_code ON daily_aggregates(crop_code);
 CREATE INDEX IF NOT EXISTS idx_update_ledger_created_at ON update_ledger(created_at);
 CREATE INDEX IF NOT EXISTS idx_update_ledger_status ON update_ledger(status);
+
 

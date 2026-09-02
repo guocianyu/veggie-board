@@ -12,11 +12,13 @@ import { CodeBadge } from '@/components/ds/CodeBadge';
 interface HomeLegacyProps {
   items: PriceItem[];
   coverage?: 'national' | 'north';
+  updatedAt?: string | null;
+  tradeDate?: string | null;
 }
 
 type GroupFilter = 'all' | 'veg' | 'fruit';
 
-export default function HomeLegacy({ items, coverage = 'north' }: HomeLegacyProps) {
+export default function HomeLegacy({ items, coverage = 'north', updatedAt, tradeDate }: HomeLegacyProps) {
   const coverageLabel =
     coverage === 'national'
       ? '全台批發市場'
@@ -113,10 +115,23 @@ export default function HomeLegacy({ items, coverage = 'north' }: HomeLegacyProp
             一眼看懂今天哪些菜漲了、哪些菜跌了
           </p>
           
-          {/* 更新時間 */}
-          <div className="text-right text-sm text-gray-500">
-            最近更新: {new Date().toLocaleDateString('zh-TW')} {new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })} (每日更新自動一次)
-          </div>
+          {/* 更新時間：顯示資料本身的交易日與更新時間，不能用當下時間假裝剛更新 */}
+          {(tradeDate || updatedAt) && (
+            <div className="text-right text-sm text-gray-500">
+              {tradeDate && <>交易日: {tradeDate}</>}
+              {updatedAt && (
+                <>
+                  {tradeDate && ' ・ '}
+                  資料更新: {new Date(updatedAt).toLocaleString('zh-TW', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 類別篩選器 */}
