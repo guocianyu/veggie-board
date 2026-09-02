@@ -3,7 +3,7 @@ import { z } from "zod";
 // 環境變數驗證 schema
 const envSchema = z.object({
   // 資料來源設定
-  DATA_SOURCE: z.enum(["mock", "api", "db"]).default("mock"),
+  DATA_SOURCE: z.enum(["mock", "api", "db"]).default("api"),
 
   // 零售係數設定
   RETAIL_COEF_LEAFY: z
@@ -33,7 +33,7 @@ function validateEnv() {
   try {
     // 提供預設環境變數
     const defaultEnv = {
-      DATA_SOURCE: "mock",
+      DATA_SOURCE: "api",
       RETAIL_COEF_LEAFY: "1.5",
       RETAIL_COEF_FRUIT: "1.7", 
       RETAIL_COEF_ROOT: "1.3",
@@ -46,7 +46,7 @@ function validateEnv() {
     console.error("❌ 環境變數驗證失敗:", error);
     // 回傳預設值而不是拋出錯誤
     return {
-      DATA_SOURCE: "mock" as const,
+      DATA_SOURCE: "api" as const,
       RETAIL_COEF_LEAFY: 1.5,
       RETAIL_COEF_FRUIT: 1.7,
       RETAIL_COEF_ROOT: 1.3,
